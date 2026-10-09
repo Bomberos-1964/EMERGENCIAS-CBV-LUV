@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#b4251b">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CBV Registro">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>CBV La Unión · Registro de emergencias</title>
+<style>
+:root{
+  --bg:#f6f7f8; --surface:#ffffff; --fg:#1b2127; --muted:#5b6670; --line:#d9dee3;
+  --accent:#b4251b; --accent-fg:#ffffff; --accent-soft:#f6e4e2; --ok:#1f7a4d; --ok-soft:#e1f1e8; --warn:#8a5a00; --warn-soft:#fbf0d9;
+  --display:'Barlow Condensed','Arial Narrow','Roboto Condensed',system-ui,sans-serif;
+  --body:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#14181c; --surface:#1c2227; --fg:#e6eaed; --muted:#9aa5ae; --line:#2f373e;
+  --accent:#ef6a5d; --accent-fg:#14181c; --accent-soft:#3a2220; --ok:#5cc491; --ok-soft:#18332a; --warn:#e3b04f; --warn-soft:#35291a}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+[hidden]{display:none!important}
+.wrap{max-width:44rem;margin-inline:auto;padding:12px 14px 24px;display:grid;gap:12px}
+.top{display:flex;align-items:center;gap:10px;justify-content:space-between;padding-top:env(safe-area-inset-top)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-size:1.7rem;line-height:1.05;margin:0}
+h2{font-family:var(--display);font-size:1.4rem;margin:0 0 8px}
+h3{font-size:1rem;margin:0 0 6px}
+p{margin:0 0 8px}
+.iconbtn{font:inherit;min-width:44px;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;font-size:20px;line-height:1}
+.status{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:7px 10px;min-height:44px;cursor:pointer;flex:1;text-align:left}
+.status.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.status.pend{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);background:var(--surface)}
+.seg button{font:inherit;font-weight:600;background:none;border:0;padding:12px 8px;min-height:46px;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+.seg button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);padding:14px;min-width:0}
+.note{background:var(--warn-soft);border-left:4px solid var(--warn);padding:9px 12px;font-size:14px}
+.okbox{background:var(--ok-soft);border-left:4px solid var(--ok);padding:9px 12px;font-size:14px}
+.banner{font-size:14px;padding:9px 12px;background:var(--accent-soft);border-left:4px solid var(--accent)}
+.err{color:var(--accent);font-size:14px;min-height:1.2em;font-weight:500}
+.err.ok{color:var(--ok)}
+form{display:grid;gap:12px}
+.blk{background:var(--surface);border:1px solid var(--line)}
+.blk>summary{cursor:pointer;font-weight:600;padding:12px 14px;min-height:48px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;font-family:var(--display);font-size:1.2rem;letter-spacing:.02em}
+.blk>summary::-webkit-details-marker{display:none}
+.blk>summary::after{content:'＋';color:var(--muted)}
+.blk[open]>summary::after{content:'－'}
+.blk>.in{display:grid;gap:12px;padding:2px 14px 14px}
+.blk h4{margin:8px 0 0;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+label,.lbl{display:grid;gap:4px;font-size:14px;font-weight:500}
+label small,.lbl small{font-weight:400;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:10px;width:100%;min-width:0;border-radius:0;min-height:46px}
+textarea{min-height:84px;resize:vertical}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.row4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:15px;font-weight:500;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:9px 14px;cursor:pointer;min-height:46px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);padding:11px 16px;cursor:pointer;min-height:48px}
+.btn.alt{background:var(--surface);color:var(--accent)}
+.btn.sm{min-height:38px;padding:6px 12px;font-size:14px}
+.btn.big{width:100%;min-height:54px;font-size:1.05rem}
+.btn[disabled]{opacity:.5;cursor:default}
+.now{margin-top:4px;width:100%}
+.derived{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.thumbs{display:grid;gap:8px}
+.thumb{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px;align-items:center}
+.thumb img{width:64px;height:64px;object-fit:cover;border:1px solid var(--line);background:var(--bg)}
+.thumb .up{font-family:var(--mono);font-size:11px;color:var(--ok)}
+.lrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;align-items:end;border:1px solid var(--line);padding:8px;background:var(--bg)}
+.ig{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:8px 14px calc(8px + env(safe-area-inset-bottom));z-index:20}
+.bar .in{max-width:44rem;margin-inline:auto;display:grid;grid-template-columns:auto 1fr 1.3fr;gap:8px}
+.bar .btn{min-height:52px}
+.cam{display:flex;align-items:center;gap:6px}
+.cam svg{width:22px;height:22px;fill:currentColor}
+.rec{display:grid;gap:4px;padding:12px 0;border-bottom:1px solid var(--line)}
+.rec:last-child{border-bottom:0}
+.rec b{font-family:var(--mono);font-size:13px}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border:1px solid var(--line);color:var(--muted);margin-left:6px}
+.pill.on{border-color:var(--ok);color:var(--ok)}
+.pill.off{border-color:var(--warn);color:var(--warn)}
+.big-ok{font-family:var(--display);font-size:1.6rem;color:var(--ok);margin:0 0 6px}
+@media (min-width:520px){.row4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><div class="eyebrow">CBV La Unión</div><h1 id="h1">Registrar emergencia</h1></div>
+    <button class="iconbtn" id="btnSet" aria-label="Ajustes">⚙</button>
+  </header>
+  <button class="status" id="chip" type="button" aria-live="polite">Cargando…</button>
+
+  <!-- PRIMERA VEZ -->
+  <section id="v-setup" class="card" hidden>
+    <h2>Primera vez en este teléfono</h2>
+    <p class="derived">Se hace una sola vez, con internet. Después funciona sin conexión.</p>
+    <form id="fsetup" novalidate>
+      <label>Código de la estación <small>(se lo da Comandancia)</small><input id="s_clave" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <label>Su nombre
+        <select id="s_sel"></select>
+      </label>
+      <label id="s_otro_l" hidden>Escriba su nombre<input id="s_otro" autocomplete="off"></label>
+      <div class="err" id="s_err" role="alert"></div>
+      <button class="btn big" type="submit" id="s_go">Entrar</button>
+      <button class="btn alt" type="button" id="s_skip" hidden>Entrar sin verificar (no hay internet)</button>
+    </form>
+  </section>
+
+  <!-- AJUSTES -->
+  <section id="v-set" hidden>
+    <div class="card" style="display:grid;gap:12px">
+      <h2>Ajustes</h2>
+      <label>Su nombre<select id="a_sel"></select></label>
+      <label id="a_otro_l" hidden>Escriba su nombre<input id="a_otro" autocomplete="off"></label>
+      <label>Código de la estación<input id="a_clave" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <div class="chips">
+        <button class="btn sm" type="button" id="a_save">Guardar ajustes</button>
+        <button class="btn alt sm" type="button" id="a_test">Probar conexión</button>
+        <button class="btn alt sm" type="button" id="a_sync">Enviar pendientes ahora</button>
+      </div>
+      <div class="derived" id="a_msg" role="status"></div>
+      <button class="btn alt" type="button" id="a_install" hidden>Instalar en este teléfono</button>
+      <p class="derived" id="a_ios" hidden>En iPhone: toque el botón Compartir de Safari y luego «Añadir a pantalla de inicio».</p>
+      <p class="derived">Versión <span id="a_ver"></span> · Los registros se guardan primero en este teléfono y se envían solos cuando hay internet.</p>
+      <button class="btn alt" type="button" id="a_back">Volver</button>
+    </div>
+  </section>
+
+  <nav class="seg" id="seg" hidden>
+    <button type="button" id="tabNew" aria-selected="true">Registro</button>
+    <button type="button" id="tabList" aria-selected="false">Mis registros <span id="nlist"></span></button>
+  </nav>
+
+  <!-- REGISTRO -->
+  <section id="v-form" hidden>
+    <form id="f" novalidate>
+      <div class="banner" id="editbanner" hidden></div>
+
+      <details class="blk" open><summary>1 · Lo esencial</summary><div class="in">
+        <label>Incidente o actividad
+          <select id="cat"></select>
+          <span class="derived" id="tipo"></span>
+        </label>
+        <label>Día del evento<input type="date" id="fecha"></label>
+        <div class="lbl">Ubicación
+          <button type="button" class="btn big" id="gps">Tomar mi ubicación (GPS)</button>
+          <span class="derived" id="gpsmsg" role="status"></span>
+          <div class="row">
+            <label><small>Latitud</small><input id="lat" inputmode="decimal" placeholder="4.5306"></label>
+            <label><small>Longitud</small><input id="lon" inputmode="decimal" placeholder="-76.1082"></label>
+          </div>
+          <a id="maplink" class="derived" href="#" target="_blank" rel="noopener" hidden>Ver en el mapa</a>
+        </div>
+        <label>Dirección o lugar de referencia<input id="dir" autocomplete="off"></label>
+        <label>Barrio, corregimiento o vereda<input id="bar" autocomplete="off"></label>
+        <div class="lbl">Zona <div class="chips" id="zona"></div></div>
+      </div></details>
+
+      <details class="blk" open><summary>2 · Tiempos</summary><div class="in">
+        <div class="row4">
+          <label><small>Hora de la alerta</small><input type="time" id="hora"><button type="button" class="btn alt sm now" data-now="hora">Ahora</button></label>
+          <label><small>Salida de estación</small><input type="time" id="hsal"><button type="button" class="btn alt sm now" data-now="hsal">Ahora</button></label>
+          <label><small>Llegada al sitio</small><input type="time" id="hlle"><button type="button" class="btn alt sm now" data-now="hlle">Ahora</button></label>
+          <label><small>Fin del servicio</small><input type="time" id="hfin"><button type="button" class="btn alt sm now" data-now="hfin">Ahora</button></label>
+        </div>
+        <div class="lbl">Duración del evento <small>(se calcula con la alerta y el fin; puede cambiarla)</small>
+          <div class="row">
+            <label><small>Minutos</small><input id="dur" type="number" min="1" inputmode="numeric"></label>
+            <div class="chips" id="durchips" style="align-content:end"></div>
+          </div>
+        </div>
+      </div></details>
+
+      <details class="blk" open><summary>3 · Qué pasó</summary><div class="in">
+        <label>Descripción del evento<textarea id="desc" rows="4"></textarea></label>
+        <div class="row" id="g-area" hidden>
+          <label>Área afectada (hectáreas)<input id="area" inputmode="decimal" placeholder="0.5"></label>
+          <label>Vegetación<input id="veg" placeholder="Pasto, guadual…"></label>
+        </div>
+        <div class="row">
+          <label>Cómo se recibió el aviso
+            <select id="canal"><option value="">Sin dato</option><option>Llamada telefónica</option><option>Radio</option><option>Personal en la estación</option><option>Policía o autoridad</option><option>Redes o WhatsApp</option><option>De oficio</option></select>
+          </label>
+          <label>Quién reportó <small>(opcional)</small><input id="rep" autocomplete="off"></label>
+        </div>
+      </div></details>
+
+      <details class="blk" open><summary>4 · Quién atendió</summary><div class="in">
+        <div class="lbl" id="g-pers" hidden>Personal <small>(toque a cada uno)</small><div class="chips" id="pers"></div></div>
+        <label>N° de unidades que asistieron<input id="uni" type="number" min="1" max="99" inputmode="numeric"></label>
+        <div class="lbl">Vehículo <div class="chips" id="veh"></div></div>
+      </div></details>
+
+      <details class="blk" open><summary>5 · Fotografías <span id="fcount" class="derived"></span></summary><div class="in">
+        <div class="row">
+          <button type="button" class="btn big" id="btncam">Tomar foto</button>
+          <button type="button" class="btn alt big" id="btngal">Elegir de la galería</button>
+        </div>
+        <input type="file" id="cam" accept="image/*" capture="environment" hidden>
+        <input type="file" id="fotos" accept="image/*" multiple hidden>
+        <p class="derived" style="margin:0">Sin límite de fotos. Se reducen solas y se envían cuando haya internet.</p>
+        <div class="thumbs" id="thumbs"></div>
+      </div></details>
+
+      <details class="blk"><summary>6 · Reporte de Emergencias <small class="derived">(complete lo que pueda)</small></summary><div class="in">
+        <h4>Propiedad</h4>
+        <label>Tipo de propiedad<select id="r_ptipo"><option value="">—</option><option>Vivienda</option><option>Finca</option><option>Comercial</option><option>Agrícola</option><option>Vía pública</option><option>Lote baldío</option><option>Industrial</option><option>Otro</option></select></label>
+        <div class="row"><label>Nombre del propietario<input id="r_pnom"></label><label>Documento<input id="r_pdoc" inputmode="numeric"></label></div>
+        <label>Teléfono de contacto<input id="r_ptel" inputmode="tel"></label>
+        <h4>Puesto de comando</h4>
+        <div class="row"><label>Ubicación del puesto de comando<input id="r_pc"></label><label>Identificación del puesto<input id="r_pcid"></label></div>
+        <div class="row"><label>Área de espera<input id="r_ae"></label><label>A.C.V.<input id="r_acv"></label></div>
+        <h4>Evaluación inicial</h4>
+        <label>Amenazas del incidente<textarea id="r_amen" rows="2"></textarea></label>
+        <label>Objetivos iniciales<textarea id="r_obj" rows="2"></textarea></label>
+        <h4>La escena</h4>
+        <div class="row"><label>¿Hubo alteración antes de llegar?<select id="r_alt"><option value="">—</option><option>SI</option><option>NO</option></select></label><label>¿Cómo se alteró?<input id="r_altc"></label></div>
+        <div class="row"><label>¿Se protegió el área al llegar?<select id="r_prot"><option value="">—</option><option>SI</option><option>NO</option></select></label><label>¿Cómo?<input id="r_protc"></label></div>
+        <div class="row"><label>¿Intervino alguien antes?<select id="r_int"><option value="">—</option><option>SI</option><option>NO</option></select></label><label>¿Quiénes?<input id="r_intc"></label></div>
+        <h4>Instituciones que apoyaron <small>(unidades · vehículos)</small></h4>
+        <div id="inst" style="display:grid;gap:8px"></div>
+        <h4>Lesionados <small>(hasta 6)</small></h4>
+        <div id="l-les" class="thumbs"></div><button type="button" class="btn alt sm" data-add="les">Agregar lesionado</button>
+        <h4>Vehículos implicados <small>(hasta 4)</small></h4>
+        <div id="l-vimp" class="thumbs"></div><button type="button" class="btn alt sm" data-add="vimp">Agregar vehículo</button>
+        <h4>Resumen de las acciones</h4>
+        <div id="l-acc" class="thumbs"></div><button type="button" class="btn alt sm" data-add="acc">Agregar acción</button>
+        <h4>Unidad que comandó el incidente</h4>
+        <div class="row"><label>Nombres y apellidos<input id="r_cn"></label><label>Grado<input id="r_cg"></label></div>
+        <label>Cargo<input id="r_cc"></label>
+        <h4>Observaciones adicionales</h4>
+        <label><textarea id="r_obs" rows="3"></textarea></label>
+      </div></details>
+
+      <div class="err" id="err" role="alert"></div>
+    </form>
+    <div class="card" id="done" hidden></div>
+  </section>
+
+  <!-- MIS REGISTROS -->
+  <section id="v-list" class="card" hidden>
+    <h2>Mis registros</h2>
+    <p class="derived">Los de este teléfono de los últimos 3 días. Puede completar o corregir un registro durante 60 minutos después de crearlo.</p>
+    <div id="recs"></div>
+  </section>
+</div>
+
+<div class="bar" id="actbar" hidden><div class="in">
+  <button type="button" class="btn alt cam" id="barcam" aria-label="Tomar foto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3 7.2 5H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.2L15 3H9zm3 5a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span id="barn">0</span></button>
+  <button type="button" class="btn alt" id="save">Guardar</button>
+  <button type="button" class="btn" id="final">Terminar y enviar</button>
+</div></div>
+
+<script src="config.js"></script>
+<script>
+'use strict';
+const CFG=window.CBV_CONFIG||{};
+const VERSION='1.0';
+const VENTANA_MIN=60, IDLE_MS=10*60000, KEEP_MS=3*86400000;
+const CATS=['CAÍDA / CORTES DE ARBOL','CONTROL DE ABEJAS','CONTROL DE AVISPAS','CAÍDA DE CUERDAS','CORTO CIRCUITO','COLAPSO DE ESTRUCTURAS','CAPACITACIONES','EXTRICACIÓN VEHICULAR','FUGA DE GAS NATURAL','FUGA DE GAS GLP','INCENDIO FORESTAL','INCENDIO ESTRUCTURAL','INCENDIO VEHICULAR','INUNDACIÓN','LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO','MATERIALES PELIGROSOS / DERRAMES','PRIMEROS AUXILIOS','RESCATE DE PERSONA / PARAPENTE','RESCATE DE ANIMAL','REUNIÓN EN LA ALCALDÍA','REUNIONES DE SERVICIO SOCIAL','SUMINISTROS DE AGUA','VISITAS DE SEGURIDAD'];
+const TIPO_CAT={"CAÍDA / CORTES DE ARBOL":"OTROS","CONTROL DE ABEJAS":"OTROS","CONTROL DE AVISPAS":"OTROS","CAÍDA DE CUERDAS":"OTROS","CORTO CIRCUITO":"INCENDIOS","COLAPSO DE ESTRUCTURAS":"OTROS","CAPACITACIONES":"OTROS","EXTRICACIÓN VEHICULAR":"RESCATES","FUGA DE GAS NATURAL":"OTROS","FUGA DE GAS GLP":"MATERIALES PELIGROSOS","INCENDIO FORESTAL":"INCENDIOS","INCENDIO ESTRUCTURAL":"INCENDIOS","INCENDIO VEHICULAR":"INCENDIOS","INUNDACIÓN":"OTROS","LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO":"OTROS","MATERIALES PELIGROSOS / DERRAMES":"MATERIALES PELIGROSOS","PRIMEROS AUXILIOS":"OTROS","RESCATE DE PERSONA / PARAPENTE":"RESCATES","RESCATE DE ANIMAL":"RESCATES","REUNIÓN EN LA ALCALDÍA":"OTROS","REUNIONES DE SERVICIO SOCIAL":"OTROS","SUMINISTROS DE AGUA":"OTROS","VISITAS DE SEGURIDAD":"INSPECCIONES DE SEGURIDAD"};
+const VEH=['B-1','B-2','B-3','B-4','T-1','L-1','L-2','L-3'];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tc=s=>s.charAt(0)+s.slice(1).toLowerCase();
+const pad=(n,l)=>String(n).padStart(l,'0');
+const isoDate=d=>d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2);
+const nowHM=()=>{const n=new Date();return pad(n.getHours(),2)+':'+pad(n.getMinutes(),2)};
+const tmin=t=>/^\d\d:\d\d$/.test(t||'')?+t.slice(0,2)*60+ +t.slice(3):null;
+const lapse=(a,b)=>{const x=tmin(a),y=tmin(b);if(x==null||y==null)return null;let d=y-x;if(d<0)d+=1440;return d};
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+/* ---------- almacenamiento local (IndexedDB; si no existe, memoria) ---------- */
+const MEM={regs:new Map(),fotos:new Map()};
+let IDBOK=true;
+const DB={
+  _p:null,
+  open(){
+    if(!this._p)this._p=new Promise((res,rej)=>{
+      try{const r=indexedDB.open('cbv-campo',1);
+        r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('regs',{keyPath:'tmp'});const f=d.createObjectStore('fotos',{keyPath:'key'});f.createIndex('tmp','tmp')};
+        r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);r.onblocked=()=>rej(new Error('blocked'))}catch(e){rej(e)}});
+    return this._p;
+  },
+  async run(store,mode,fn){
+    if(!IDBOK){return fn(null,true)}
+    try{const d=await this.open();return await new Promise((res,rej)=>{const t=d.transaction(store,mode),s=t.objectStore(store);let out;const q=fn(s,false);if(q&&'onsuccess' in q){q.onsuccess=()=>{out=q.result}}t.oncomplete=()=>res(out);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
+    catch(e){IDBOK=false;$('chip').dataset.nobk='1';return fn(null,true)}
+  },
+  async get(store,key){return this.run(store,'readonly',(s,mem)=>mem?{result:MEM[store].get(key)}:s.get(key)).then(x=>x&&x.result!==undefined?x.result:x)},
+  async put(store,val){const k=store==='regs'?val.tmp:val.key;return this.run(store,'readwrite',(s,mem)=>{if(mem){MEM[store].set(k,val);return null}return s.put(val)})},
+  async del(store,key){return this.run(store,'readwrite',(s,mem)=>{if(mem){MEM[store].delete(key);return null}return s.delete(key)})},
+  async all(store){const r=await this.run(store,'readonly',(s,mem)=>mem?{result:[...MEM[store].values()]}:s.getAll());return r||[]},
+  async byTmp(tmp){const r=await this.run('fotos','readonly',(s,mem)=>mem?{result:[...MEM.fotos.values()].filter(f=>f.tmp===tmp)}:s.index('tmp').getAll(tmp));return (r||[]).sort((a,b)=>a.n-b.n)},
+  /* lectura y escritura en una sola transacción: evita pisar cambios entre la pantalla y el envío */
+  async upd(store,key,fn){
+    if(!IDBOK){const v=MEM[store].get(key);if(!v)return null;const n=fn(v)||v;MEM[store].set(key,n);return n}
+    try{const d=await this.open();return await new Promise((res,rej)=>{const t=d.transaction(store,'readwrite'),s=t.objectStore(store);let out=null;
+      const g=s.get(key);g.onsuccess=()=>{const v=g.result;if(!v)return;out=fn(v)||v;s.put(out)};t.oncomplete=()=>res(out);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
+    catch(e){IDBOK=false;return this.upd(store,key,fn)}
+  }
+};
+
+/* ---------- estado ---------- */
+let AJ=lsGet('cbv_aj',{clave:'',nombre:'',roster:[]});
+let REG=null;          // registro abierto en pantalla
+let FOTOS=[];          // fotos del registro abierto
+let sel={veh:new Set(),pers:new Set(),zona:''};
+let regInit=false,gpsTouched=false,online=navigator.onLine,syncing=false,lastErr='';
+const thumbURLs=[];
+
+/* ---------- vistas ---------- */
+function show(v){
+  ['setup','set','form','list'].forEach(k=>$('v-'+k).hidden=k!==v);
+  const main=v==='form'||v==='list';
+  $('seg').hidden=!main;
+  $('actbar').hidden=v!=='form'||!$('done').hidden;
+  $('tabNew').setAttribute('aria-selected',v==='form');$('tabList').setAttribute('aria-selected',v==='list');
+  $('h1').textContent=v==='list'?'Mis registros':v==='set'?'Ajustes':v==='setup'?'Bienvenido':'Registrar emergencia';
+  if(v==='list')renderList();
+}
+
+/* ---------- comunicación con la central ---------- */
+async function call(a,extra,clave){
+  if(!CFG.SCRIPT_URL)throw new Error('sin_url');
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),75000);
+  try{
+    const r=await fetch(CFG.SCRIPT_URL,{method:'POST',body:JSON.stringify({k:clave||AJ.clave,a,...(extra||{})}),headers:{'Content-Type':'text/plain;charset=utf-8'},signal:ctl.signal,redirect:'follow'});
+    const j=await r.json();online=true;return j;
+  }catch(e){online=false;throw e}finally{clearTimeout(t)}
+}
+const blobB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
+
+/* ---------- envío (sincronización) ---------- */
+const hasContent=reg=>{const d=reg.datos||{};return !!(d.dir||d.desc||(d.lat&&d.lon))};
+async function sync(){
+  if(syncing||!AJ.clave||!CFG.SCRIPT_URL)return;
+  syncing=true;lastErr='';setChip();
+  try{
+    const regs=(await DB.all('regs')).sort((a,b)=>a.creado-b.creado);
+    for(let reg of regs){
+      if(!reg.pedido&&reg.ver>reg.subida&&hasContent(reg)&&Date.now()-reg.touch>IDLE_MS){reg=await DB.upd('regs',reg.tmp,r=>{r.pedido=true})}
+      if(!reg.pedido)continue;
+      let fotos=await DB.byTmp(reg.tmp);
+      const vis=fotos.filter(f=>!f.del).length;
+      /* 1. datos del registro */
+      if(reg.ver>reg.subida||!reg.num){
+        const v0=reg.ver;
+        const r=await call('rec',{tmp:reg.tmp,creado:reg.creado,estado:reg.estado,datos:reg.datos,nfotos:vis,por:AJ.nombre,disp:deviceName()});
+        if(!r.ok){if(r.error==='clave'){claveMala();return}throw new Error(r.error||'servidor')}
+        reg=await DB.upd('regs',reg.tmp,x=>{x.num=r.num;x.form=r.form;x.subida=Math.max(x.subida,v0)});
+      }
+      /* 2. fotografías */
+      for(const f of fotos){
+        if(f.del){
+          if(f.up){const r=await call('fotoDel',{tmp:f.tmp,n:f.n});if(!r.ok)throw new Error(r.error||'servidor')}
+          await DB.del('fotos',f.key);continue;
+        }
+        if(!f.up){
+          const r=await call('foto',{tmp:f.tmp,n:f.n,d:await blobB64(f.blob),desc:f.desc||''});
+          if(!r.ok){
+            if(r.error==='clave'){claveMala();return}
+            if(r.error==='sin_registro'){await DB.upd('regs',reg.tmp,x=>{x.subida=0});throw new Error('reintentar')}
+            throw new Error(r.error||'servidor')}
+          await DB.upd('fotos',f.key,x=>{x.up=true;x.dirtyDesc=false});
+        }else if(f.dirtyDesc){
+          const r=await call('foto',{tmp:f.tmp,n:f.n,desc:f.desc||''});
+          if(!r.ok)throw new Error(r.error||'servidor');
+          await DB.upd('fotos',f.key,x=>{x.dirtyDesc=false});
+        }
+        setChip(true);
+      }
+      /* 3. si no quedó nada pendiente, se baja la bandera */
+      const cur=await DB.get('regs',reg.tmp),fs=await DB.byTmp(reg.tmp);
+      if(cur&&cur.ver===cur.subida&&fs.every(f=>f.up&&!f.dirtyDesc&&!f.del))await DB.upd('regs',reg.tmp,x=>{x.pedido=false});
+    }
+  }catch(e){lastErr=(e&&e.message)||'error'}
+  finally{
+    syncing=false;
+    if(REG){const cur=await DB.get('regs',REG.tmp);if(cur){REG.num=cur.num;REG.subida=cur.subida;REG.form=cur.form}}
+    setChip();if(!$('done').hidden)renderDone();if(!$('v-list').hidden)renderList();
+  }
+}
+function claveMala(){lastErr='clave';AJ.claveMala=true;setChip();$('a_msg').textContent='El código de la estación no es correcto. Pídalo de nuevo a Comandancia.';show('set');fillSettings()}
+function deviceName(){const u=navigator.userAgent;const m=u.match(/\(([^)]+)\)/);return (m?m[1]:'').slice(0,60)}
+
+async function pendCount(){
+  let n=0;
+  for(const reg of await DB.all('regs')){
+    const fs=await DB.byTmp(reg.tmp);
+    const pr=reg.pedido||(reg.ver>reg.subida&&hasContent(reg)&&Date.now()-reg.touch>IDLE_MS);
+    if(!pr)continue;
+    if(reg.ver>reg.subida||!reg.num)n++;
+    n+=fs.filter(f=>f.del&&f.up||!f.up&&!f.del||f.dirtyDesc).length;
+  }
+  return n;
+}
+async function setChip(){
+  const c=$('chip');
+  if(!AJ.clave){c.className='status';c.textContent='Falta el código de la estación';return}
+  if(syncing){c.className='status pend';c.textContent='Enviando a la central…';return}
+  const n=await pendCount();
+  if(lastErr==='clave'){c.className='status pend';c.textContent='Código incorrecto: toque para corregirlo';return}
+  if(n>0){c.className='status pend';c.textContent=(online?'':'Sin conexión · ')+n+' por enviar · toque para reintentar';return}
+  c.className='status ok';c.textContent=online?'Todo enviado a la central':'Todo enviado · sin conexión';
+  if(c.dataset.nobk)c.textContent+=' · sin respaldo local';
+}
+
+/* ---------- registro actual ---------- */
+const nuevoTmp=()=>'T'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const editable=reg=>Date.now()-reg.creado<VENTANA_MIN*60000;
+async function asegurarReg(){
+  if(REG)return REG;
+  REG={tmp:nuevoTmp(),num:null,creado:Date.now(),ver:0,subida:0,estado:'borrador',pedido:false,touch:Date.now(),datos:{},sig:1};
+  await DB.put('regs',REG);lsSet('cbv_actual',REG.tmp);return REG;
+}
+async function patchReg(fn){REG=await DB.upd('regs',REG.tmp,r=>{fn(r);r.touch=Date.now()})||REG}
+let drTimer=null;
+function autosave(){
+  clearTimeout(drTimer);
+  drTimer=setTimeout(async()=>{
+    if(REG&&!editable(REG)&&REG.estado==='final')return;
+    await asegurarReg();const v=readForm();
+    await patchReg(r=>{r.datos=v;r.ver++});setChip();
+  },500);
+}
+
+/* ---------- formulario ---------- */
+const LISTS={
+  les:{max:6,f:[['n','Nombre'],['d','Documento'],['e','Edad','number'],['t','Trasladado a'],['p','Trasladado por']]},
+  vimp:{max:4,f:[['c','Conductor'],['d','Documento'],['v','Vehículo'],['col','Color'],['pl','Placa']]},
+  acc:{max:57,f:[['h','Hora','time'],['a','Acción realizada']]}
+};
+const INST=[['dc','Defensa Civil'],['cr','Cruz Roja'],['pn','Policía Nacional'],['pcar','Policía de Carreteras'],['hosp','Hospitales']];
+function addRow(k,vals){
+  const L=LISTS[k],box=$('l-'+k);if(box.children.length>=L.max)return;
+  const d=document.createElement('div');d.className='lrow';
+  d.innerHTML=L.f.map(([key,lab,type])=>'<label><small>'+lab+'</small><input data-k="'+key+'" type="'+(type||'text')+'" value="'+esc((vals&&vals[key])||'')+'"></label>').join('')+'<button type="button" class="btn alt sm">Quitar</button>';
+  d.querySelector('button').onclick=()=>{d.remove();autosave()};box.appendChild(d);
+}
+function readList(k){return [...$('l-'+k).children].map(d=>{const o={};d.querySelectorAll('input').forEach(i=>o[i.dataset.k]=i.value.trim());return o}).filter(o=>Object.values(o).some(Boolean))}
+const filled=v=>Array.isArray(v)?v.some(filled):v&&typeof v==='object'?Object.values(v).some(filled):!!v;
+function readRpt(){
+  const g=id=>$(id).value.trim();
+  const rp={prop:{tipo:g('r_ptipo'),nom:g('r_pnom'),doc:g('r_pdoc'),tel:g('r_ptel')},zona:sel.zona||'',pc:g('r_pc'),pcid:g('r_pcid'),ae:g('r_ae'),acv:g('r_acv'),amen:g('r_amen'),obj:g('r_obj'),
+    esc:{alt:g('r_alt'),altc:g('r_altc'),prot:g('r_prot'),protc:g('r_protc'),int:g('r_int'),intc:g('r_intc')},inst:{},
+    les:readList('les'),vimp:readList('vimp'),acc:readList('acc'),cmd:{n:g('r_cn'),g:g('r_cg'),c:g('r_cc')},obs:g('r_obs')};
+  INST.forEach(([k])=>rp.inst[k]=[g('i_'+k+'_u'),g('i_'+k+'_v')]);
+  return filled({...rp,cmd:null,zona:null})?rp:null;
+}
+function setRpt(rp){
+  rp=rp||{};const s=(id,v)=>{$(id).value=v||''};
+  const p=rp.prop||{};s('r_ptipo',p.tipo);s('r_pnom',p.nom);s('r_pdoc',p.doc);s('r_ptel',p.tel);
+  s('r_pc',rp.pc);s('r_pcid',rp.pcid);s('r_ae',rp.ae);s('r_acv',rp.acv);s('r_amen',rp.amen);s('r_obj',rp.obj);
+  const e=rp.esc||{};s('r_alt',e.alt);s('r_altc',e.altc);s('r_prot',e.prot);s('r_protc',e.protc);s('r_int',e.int);s('r_intc',e.intc);
+  INST.forEach(([k])=>{const v=(rp.inst||{})[k]||[];s('i_'+k+'_u',v[0]);s('i_'+k+'_v',v[1])});
+  ['les','vimp','acc'].forEach(k=>{$('l-'+k).innerHTML='';(rp[k]||[]).forEach(x=>addRow(k,x))});
+  const c=rp.cmd||lsGet('cbv_cmd',{});s('r_cn',c.n);s('r_cg',c.g);s('r_cc',c.c);s('r_obs',rp.obs);
+}
+function readForm(){
+  const lat=$('lat').value.trim().replace(',','.'),lon=$('lon').value.trim().replace(',','.');
+  const rpt=readRpt();
+  return {cat:$('cat').value,tipo:TIPO_CAT[$('cat').value]||'OTROS',fecha:$('fecha').value,hora:$('hora').value,dir:$('dir').value.trim(),bar:$('bar').value.trim(),zona:sel.zona||'',
+    desc:$('desc').value.trim(),durmin:+$('dur').value||null,uni:+$('uni').value||null,veh:[...sel.veh].join(', '),
+    lat:lat||null,lon:lon||null,area:$('area').value.trim()?($('area').value.trim().replace(',','.')+' HA'):null,veg:$('veg').value.trim()||null,
+    hsal:$('hsal').value||null,hlle:$('hlle').value||null,hfin:$('hfin').value||null,canal:$('canal').value||null,rep:$('rep').value.trim()||null,pers:[...sel.pers],rpt};
+}
+function fillForm(it){
+  $('cat').value=it.cat||CATS[0];onCat();$('fecha').value=it.fecha||isoDate(new Date());$('hora').value=it.hora||'';$('hsal').value=it.hsal||'';$('hlle').value=it.hlle||'';$('hfin').value=it.hfin||'';
+  $('canal').value=it.canal||'';$('rep').value=it.rep||'';$('dir').value=it.dir||'';$('bar').value=it.bar||'';
+  $('lat').value=it.lat||'';$('lon').value=it.lon||'';$('area').value=String(it.area||'').replace(' HA','');$('veg').value=it.veg||'';
+  $('dur').value=it.durmin||'';$('desc').value=it.desc||'';$('uni').value=it.uni||'';
+  sel.pers=new Set(it.pers||[]);paintChips('pers',sel.pers);
+  sel.veh=new Set(String(it.veh||'').split(',').map(s=>s.trim()).filter(Boolean));paintChips('veh',sel.veh);
+  sel.zona=it.zona||(it.rpt&&it.rpt.zona)||'';paintZona();
+  setRpt(it.rpt);mapLink();
+}
+function paintChips(id,set){document.querySelectorAll('#'+id+' .chip').forEach(b=>b.setAttribute('aria-pressed',set.has(b.textContent)))}
+function paintZona(){document.querySelectorAll('#zona .chip').forEach(b=>b.setAttribute('aria-pressed',!!sel.zona&&b.textContent.toUpperCase()===sel.zona))}
+function validate(v,final){
+  const miss=[];
+  if(!v.fecha)miss.push('día');
+  if(!v.dir&&!(v.lat&&v.lon))miss.push('dirección o coordenadas');
+  if(final){if(!v.durmin)miss.push('duración (o hora de alerta y de fin)');if(!v.dir)miss.push('dirección');if(!v.desc)miss.push('descripción');if(!v.uni)miss.push('unidades');if(!v.veh)miss.push('vehículo')}
+  return miss;
+}
+const msg=(m,ok)=>{const e=$('err');e.className='err'+(ok?' ok':'');e.textContent=m||''};
+function onCat(){
+  const c=$('cat').value;
+  $('tipo').textContent='Tipo de incidente: '+tc(TIPO_CAT[c]||'OTROS')+' (se asigna solo)';
+  $('g-area').hidden=c!=='INCENDIO FORESTAL';
+}
+function autoDur(){const d=lapse($('hora').value,$('hfin').value);if(d!=null&&d>0&&d<1440)$('dur').value=d}
+
+/* GPS */
+function setGps(m){$('gpsmsg').textContent=m}
+function mapLink(){const a=$('maplink'),la=$('lat').value.replace(',','.'),lo=$('lon').value.replace(',','.');
+  if(la&&lo&&!isNaN(la)&&!isNaN(lo)){a.href='https://www.google.com/maps?q='+encodeURIComponent(la+','+lo);a.hidden=false}else a.hidden=true}
+let gpsW=null,gpsT=null;
+function takeGps(auto){
+  if(!navigator.geolocation){setGps('Este teléfono no permite tomar la ubicación aquí. Escriba las coordenadas o péguelas desde el mapa.');return}
+  if(gpsW!=null){navigator.geolocation.clearWatch(gpsW);gpsW=null}clearTimeout(gpsT);
+  if(!auto)gpsTouched=false;
+  setGps('Buscando señal GPS…');let best=null;
+  const stop=()=>{if(gpsW!=null){navigator.geolocation.clearWatch(gpsW);gpsW=null}clearTimeout(gpsT)};
+  try{
+    gpsW=navigator.geolocation.watchPosition(p=>{
+      if(gpsTouched)return;
+      if(!best||p.coords.accuracy<best.coords.accuracy){best=p;
+        $('lat').value=p.coords.latitude.toFixed(6);$('lon').value=p.coords.longitude.toFixed(6);mapLink();
+        setGps('Ubicación tomada, precisión ±'+Math.round(p.coords.accuracy)+' m.');if(REG)autosave()}
+      if(p.coords.accuracy<=15)stop();
+    },e=>{stop();if(!best)setGps(e&&e.code===1?'No se dio permiso de ubicación. Escriba las coordenadas o péguelas desde el mapa del teléfono.':'No se pudo obtener la ubicación. Puede escribir las coordenadas.')},
+    {enableHighAccuracy:true,timeout:25000,maximumAge:0});
+    gpsT=setTimeout(stop,20000);
+  }catch(e){setGps('Este navegador bloqueó la ubicación. Escriba las coordenadas.')}
+}
+function splitCoords(){
+  const m=$('lat').value.match(/(-?\d+[.,]\d+)\s*[,;\s]\s*(-?\d+[.,]\d+)/);
+  if(m){$('lat').value=m[1].replace(',','.');$('lon').value=m[2].replace(',','.')}
+}
+
+/* Fotos */
+function compress(file){
+  return new Promise(async(res,rej)=>{
+    try{
+      let bmp;
+      try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'})}
+      catch(e){bmp=await new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);ok(im)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('img'))};im.src=u})}
+      const W=bmp.width||bmp.naturalWidth,H=bmp.height||bmp.naturalHeight;
+      const draw=(max,q)=>new Promise(ok=>{const s=Math.min(1,max/Math.max(W,H)),w=Math.round(W*s),h=Math.round(H*s),cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        cv.getContext('2d').drawImage(bmp,0,0,w,h);cv.toBlob(b=>ok({blob:b,w,h,cv}),'image/jpeg',q)});
+      let max=1600,q=.72,o;
+      for(let k=0;k<4;k++){o=await draw(max,q);if(o.blob&&o.blob.size<=350*1024)break;max=Math.round(max*.8);q-=.06}
+      const ts=Math.min(1,120/Math.max(o.w,o.h)),tc_=document.createElement('canvas');tc_.width=Math.round(o.w*ts);tc_.height=Math.round(o.h*ts);
+      tc_.getContext('2d').drawImage(o.cv,0,0,tc_.width,tc_.height);
+      res({blob:o.blob,w:o.w,h:o.h,thumb:tc_.toDataURL('image/jpeg',.6)});
+    }catch(e){rej(e)}
+  });
+}
+async function addFotos(files){
+  await asegurarReg();
+  if(REG.estado==='final'&&!editable(REG)){msg('Ya pasó la hora para agregar fotos a este registro.');return}
+  let ok=0;
+  for(let i=0;i<files.length;i++){
+    $('fcount').textContent='Procesando '+(i+1)+' de '+files.length+'…';
+    try{
+      const c=await compress(files[i]);
+      let n=0;await patchReg(r=>{n=r.sig++;r.pedido=true;r.ver++;r.datos=readForm()});
+      const f={key:REG.tmp+'#'+n,tmp:REG.tmp,n,blob:c.blob,thumb:c.thumb,w:c.w,h:c.h,desc:'',up:false,t:Date.now()};
+      await DB.put('fotos',f);FOTOS.push(f);ok++;
+    }catch(x){msg('No se pudo leer una de las fotografías.')}
+  }
+  drawThumbs();setChip();sync();
+}
+function drawThumbs(){
+  const vis=FOTOS.filter(f=>!f.del),t=$('thumbs');t.innerHTML='';
+  $('fcount').textContent=vis.length?'· '+vis.length+' foto'+(vis.length>1?'s':''):'';
+  $('barn').textContent=vis.length;
+  vis.forEach((f,i)=>{const d=document.createElement('div');d.className='thumb';
+    d.innerHTML='<img alt="Fotografía '+(i+1)+'" src="'+f.thumb+'"><div><input aria-label="Descripción de la fotografía '+(i+1)+'" placeholder="Descripción (opcional)" value="'+esc(f.desc||'')+'"><span class="up">'+(f.up?'enviada':'pendiente de enviar')+'</span></div><button type="button" class="btn alt sm" aria-label="Quitar fotografía '+(i+1)+'">Quitar</button>';
+    d.querySelector('input').onchange=async e=>{f.desc=e.target.value;await DB.upd('fotos',f.key,x=>{x.desc=f.desc;if(x.up)x.dirtyDesc=true});await patchReg(r=>{r.pedido=r.pedido||r.subida>0})};
+    d.querySelector('button').onclick=async()=>{
+      if(!confirm('¿Quitar esta fotografía?'))return;
+      if(f.up){f.del=true;await DB.upd('fotos',f.key,x=>{x.del=true});await patchReg(r=>{r.pedido=true;r.ver++})}else{await DB.del('fotos',f.key);FOTOS=FOTOS.filter(x=>x!==f)}
+      drawThumbs();setChip();sync()};
+    t.appendChild(d)});
+}
+
+/* guardar y terminar */
+async function guardar(final){
+  const v=readForm(),miss=validate(v,final);
+  if(miss.length){msg('Falta: '+miss.join(', ')+'.');return}
+  await asegurarReg();
+  if(!editable(REG)){msg('Ya pasó la hora para corregir este registro. Comuníquese con Comandancia.');return}
+  $('save').disabled=$('final').disabled=true;msg('');
+  try{
+    await patchReg(r=>{r.datos=v;r.estado=final?'final':r.estado;r.ver++;r.pedido=true});
+    lsSet('cbv_cmd',v.rpt&&v.rpt.cmd&&v.rpt.cmd.n?v.rpt.cmd:lsGet('cbv_cmd',{}));
+    if(final){showDone()}
+    else{
+      msg('Guardado en el teléfono a las '+nowHM()+'. '+(online?'Enviando a la central…':'Se enviará cuando haya internet.'),true);
+      $('editbanner').hidden=false;$('editbanner').textContent='Registro abierto: puede seguir agregando datos y fotos durante '+VENTANA_MIN+' minutos.';
+    }
+  }catch(x){msg('No se pudo guardar en este teléfono: '+(x&&x.message||x))}
+  $('save').disabled=$('final').disabled=false;
+  sync();
+}
+function showDone(){
+  const d=$('done');d.hidden=false;$('f').hidden=true;$('actbar').hidden=true;renderDone();window.scrollTo({top:0});
+}
+function renderDone(){
+  if(!REG)return;const d=$('done');
+  const n=FOTOS.filter(f=>!f.del).length,sent=REG.num&&REG.ver===REG.subida;
+  const left=VENTANA_MIN*60000-(Date.now()-REG.creado);
+  d.innerHTML=(sent?'<p class="big-ok">Enviado a la central</p><p>Registro <b>'+esc(REG.num)+'</b> · '+esc(tc(REG.datos.cat||''))+' · '+n+' foto(s).</p>':
+    '<p class="big-ok" style="color:var(--warn)">Guardado en este teléfono</p><p>'+(online?'Enviando a la central…':'No hay internet. Se enviará solo cuando vuelva la señal (puede cerrar la aplicación).')+' · '+n+' foto(s).</p>')+
+    (REG.form&&REG.form.indexOf('enviado')===0?'<p class="derived">También se respondió el Formulario de Google.</p>':'')+
+    '<div class="chips" style="margin-top:8px">'+(left>0?'<button type="button" class="btn alt" id="d-edit">Corregir ('+Math.ceil(left/60000)+' min)</button>':'')+'<button type="button" class="btn" id="d-new">Nueva emergencia</button></div>';
+  $('d-new').onclick=()=>nuevaEmergencia();
+  if($('d-edit'))$('d-edit').onclick=()=>abrir(REG.tmp);
+}
+async function nuevaEmergencia(){
+  REG=null;FOTOS=[];lsSet('cbv_actual',null);
+  $('done').hidden=true;$('f').hidden=false;
+  resetForm();show('form');window.scrollTo({top:0});takeGps(true);
+}
+function resetForm(){
+  $('f').reset();sel={veh:new Set(),pers:new Set(),zona:''};gpsTouched=false;
+  paintChips('pers',sel.pers);paintChips('veh',sel.veh);paintZona();
+  $('fecha').value=isoDate(new Date());$('hora').value=nowHM();setGps('');setRpt(null);
+  $('editbanner').hidden=true;msg('');drawThumbs();onCat();mapLink();
+}
+async function abrir(tmp){
+  const reg=await DB.get('regs',tmp);if(!reg)return;
+  if(!editable(reg)){alert('Pasó más de una hora desde que se creó este registro y ya no se puede cambiar desde el teléfono.');return}
+  REG=reg;FOTOS=await DB.byTmp(tmp);lsSet('cbv_actual',tmp);
+  $('done').hidden=true;$('f').hidden=false;resetForm();fillForm(reg.datos||{});
+  drawThumbs();show('form');
+  $('editbanner').hidden=false;$('editbanner').textContent='Está editando '+(reg.num||'un registro que aún no tiene número')+'. Los cambios se envían solos.';
+  window.scrollTo({top:0});
+}
+
+/* Mis registros */
+async function renderList(){
+  const regs=(await DB.all('regs')).sort((a,b)=>b.creado-a.creado);
+  $('nlist').textContent=regs.length?'('+regs.length+')':'';
+  const box=$('recs');
+  if(!regs.length){box.innerHTML='<p class="derived">Todavía no hay registros en este teléfono.</p>';return}
+  const rows=[];
+  for(const r of regs){
+    const fs=await DB.byTmp(r.tmp),d=r.datos||{},n=fs.filter(f=>!f.del).length,pend=fs.filter(f=>!f.up&&!f.del).length;
+    const left=VENTANA_MIN*60000-(Date.now()-r.creado),open=left>0;
+    const synced=r.num&&r.ver===r.subida&&!pend&&!r.pedido;
+    rows.push('<div class="rec"><b>'+esc(r.num||'Sin número todavía')+'</b><span>'+esc(tc(d.cat||'Sin categoría'))+' · '+esc(d.fecha||'')+' '+esc(d.hora||'')+'</span>'+
+      '<span class="derived">'+esc(d.dir||'')+' · '+(d.uni||'?')+' unid. · '+esc(d.veh||'')+' · '+n+' fotos'+
+      (synced?'<span class="pill on">en la central</span>':'<span class="pill off">por enviar'+(pend?' · '+pend+' foto(s)':'')+'</span>')+
+      (r.estado==='final'?'':'<span class="pill off">en curso</span>')+(open?'<span class="pill on">editable '+Math.ceil(left/60000)+' min</span>':'')+'</span>'+
+      (open?'<div><button type="button" class="btn alt sm" data-ed="'+esc(r.tmp)+'">'+(r.estado==='final'?'Corregir':'Continuar')+'</button></div>':'')+'</div>');
+  }
+  box.innerHTML=rows.join('');
+  box.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>abrir(b.dataset.ed));
+}
+
+/* ---------- ajustes ---------- */
+function fillRosterSelect(selEl,otroL,val){
+  const names=AJ.roster||[];
+  selEl.innerHTML='<option value="">Elija su nombre…</option>'+names.map(n=>'<option>'+esc(n)+'</option>').join('')+'<option value="__otro">Otro (escribir)…</option>';
+  if(val&&names.includes(val))selEl.value=val;else if(val){selEl.value='__otro';otroL.hidden=false;otroL.querySelector('input').value=val}else otroL.hidden=true;
+  selEl.onchange=()=>{otroL.hidden=selEl.value!=='__otro'};
+}
+const pickName=(selEl,otroL)=>selEl.value==='__otro'?otroL.querySelector('input').value.trim():selEl.value;
+function fillSettings(){
+  fillRosterSelect($('a_sel'),$('a_otro_l'),AJ.nombre);$('a_clave').value=AJ.clave||'';$('a_ver').textContent=VERSION;
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!navigator.standalone;$('a_ios').hidden=!ios;
+}
+async function pingRoster(clave){const r=await call('ping',null,clave);if(r.ok){AJ.roster=r.personal||[];lsSet('cbv_aj',AJ);if(regInit)loadRosterChips()}return r}
+function startApp(){
+  show('form');$('seg').hidden=false;
+  if(!regInit)initForm();
+  setChip();
+}
+
+/* ---------- arranque del formulario ---------- */
+function initForm(){
+  regInit=true;
+  document.querySelectorAll('[data-now]').forEach(b=>b.onclick=()=>{$(b.dataset.now).value=nowHM();autoDur();autosave()});
+  ['hora','hfin'].forEach(id=>$(id).addEventListener('change',autoDur));
+  CATS.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=tc(c);$('cat').appendChild(o)});
+  VEH.forEach(v=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=v;b.setAttribute('aria-pressed','false');
+    b.onclick=()=>{sel.veh.has(v)?sel.veh.delete(v):sel.veh.add(v);b.setAttribute('aria-pressed',sel.veh.has(v));autosave()};$('veh').appendChild(b)});
+  [15,30,60,90].forEach(m=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=m;b.onclick=()=>{$('dur').value=m;autosave()};$('durchips').appendChild(b)});
+  ['URBANA','RURAL'].forEach(z=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=tc(z);b.setAttribute('aria-pressed','false');
+    b.onclick=()=>{sel.zona=sel.zona===z?'':z;paintZona();autosave()};$('zona').appendChild(b)});
+  $('inst').innerHTML=INST.map(([k,n])=>'<div class="ig"><span style="font-size:14px;font-weight:500">'+n+'</span><label><small>Unidades</small><input id="i_'+k+'_u" type="number" min="0" inputmode="numeric"></label><label><small>Vehículos</small><input id="i_'+k+'_v" type="number" min="0" inputmode="numeric"></label></div>').join('');
+  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{addRow(b.dataset.add,b.dataset.add==='acc'?{h:nowHM()}:null);autosave()});
+  $('gps').onclick=()=>takeGps(false);
+  $('lat').addEventListener('input',()=>{gpsTouched=true;splitCoords();mapLink()});$('lon').addEventListener('input',()=>{gpsTouched=true;mapLink()});
+  const onFiles=e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)addFotos(fs)};
+  $('btncam').onclick=$('barcam').onclick=()=>$('cam').click();$('btngal').onclick=()=>$('fotos').click();
+  $('cam').onchange=onFiles;$('fotos').onchange=onFiles;
+  $('f').addEventListener('input',autosave);$('f').addEventListener('change',autosave);
+  $('cat').addEventListener('change',onCat);
+  $('f').onsubmit=e=>{e.preventDefault()};
+  $('f').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT')e.preventDefault()});
+  $('save').onclick=()=>guardar(false);$('final').onclick=()=>guardar(true);
+  resetForm();
+}
+async function restoreCurrent(){
+  const t=lsGet('cbv_actual',null);if(!t)return false;
+  const reg=await DB.get('regs',t);if(!reg)return false;
+  if(reg.estado==='final'&&(!editable(reg)||reg.subida===reg.ver&&reg.num&&Date.now()-reg.touch>15*60000))return false;
+  if(!editable(reg)&&reg.estado!=='final'&&Date.now()-reg.creado>12*3600e3)return false;
+  REG=reg;FOTOS=await DB.byTmp(t);fillForm(reg.datos||{});drawThumbs();
+  if(reg.estado==='final'&&!$('f').hidden){showDone()}
+  else{$('editbanner').hidden=false;$('editbanner').textContent='Continúa el registro que dejó abierto'+(reg.num?' ('+reg.num+')':'')+'.'}
+  return true;
+}
+async function limpiar(){
+  const lim=Date.now()-KEEP_MS;
+  for(const r of await DB.all('regs')){
+    if(r.creado>lim)continue;
+    const fs=await DB.byTmp(r.tmp);
+    if(!r.pedido&&r.ver===r.subida&&r.num&&fs.every(f=>f.up||f.del)){for(const f of fs)await DB.del('fotos',f.key);await DB.del('regs',r.tmp)}
+  }
+}
+
+/* ---------- eventos globales y arranque ---------- */
+function bindAll(){
+  $('btnSet').onclick=()=>{fillSettings();$('a_msg').textContent='';show('set')};
+  $('a_back').onclick=()=>show('form');
+  $('chip').onclick=()=>{if(!AJ.clave||lastErr==='clave'){fillSettings();show('set');return}sync()};
+  $('tabNew').onclick=()=>show('form');$('tabList').onclick=()=>show('list');
+  $('a_sync').onclick=()=>{$('a_msg').textContent='Enviando…';sync().then(()=>{$('a_msg').textContent=lastErr?'No se pudo enviar ahora ('+lastErr+'). Se reintentará solo.':'Listo.'})};
+  $('a_test').onclick=async()=>{
+    $('a_msg').textContent='Probando…';
+    try{const r=await pingRoster($('a_clave').value.trim());$('a_msg').textContent=r.ok?'Conexión correcta. Personal cargado: '+(r.personal||[]).length+'.':(r.error==='clave'?'El código no es correcto.':'Respuesta inesperada: '+(r.error||''))}
+    catch(e){$('a_msg').textContent=e.message==='sin_url'?'Falta la dirección del servicio en config.js.':'No hay conexión con la central ahora mismo.'}
+  };
+  $('a_save').onclick=()=>{
+    const nombre=pickName($('a_sel'),$('a_otro_l'));
+    AJ.clave=$('a_clave').value.trim()||AJ.clave;AJ.nombre=nombre||AJ.nombre;AJ.claveMala=false;lsSet('cbv_aj',AJ);lastErr='';
+    $('a_msg').textContent='Guardado.';setChip();sync();show('form');
+  };
+  $('s_sel').onchange=()=>{$('s_otro_l').hidden=$('s_sel').value!=='__otro'};
+  $('fsetup').onsubmit=async e=>{
+    e.preventDefault();const clave=$('s_clave').value.trim(),nombre=pickName($('s_sel'),$('s_otro_l'));
+    if(!clave){$('s_err').textContent='Escriba el código de la estación.';return}
+    if(!nombre){$('s_err').textContent='Elija o escriba su nombre.';return}
+    $('s_go').disabled=true;$('s_err').textContent='Verificando…';
+    try{const r=await pingRoster(clave);
+      if(!r.ok){$('s_err').textContent=r.error==='clave'?'El código no es correcto.':'Respuesta inesperada del servicio.';$('s_go').disabled=false;return}
+      AJ.clave=clave;AJ.nombre=nombre;lsSet('cbv_aj',AJ);finishSetup();
+    }catch(x){
+      $('s_err').textContent=x.message==='sin_url'?'Falta configurar la dirección del servicio (archivo config.js).':'No hay internet para verificar el código.';$('s_skip').hidden=x.message==='sin_url';$('s_go').disabled=false}
+  };
+  $('s_skip').onclick=()=>{AJ.clave=$('s_clave').value.trim();AJ.nombre=pickName($('s_sel'),$('s_otro_l'));if(!AJ.clave||!AJ.nombre){$('s_err').textContent='Escriba el código y su nombre.';return}lsSet('cbv_aj',AJ);finishSetup()};
+  window.addEventListener('online',()=>{online=true;sync()});
+  window.addEventListener('offline',()=>{online=false;setChip()});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sync()});
+  setInterval(()=>{pendCount().then(n=>{if(n>0||!online)sync()})},20000);
+  setInterval(()=>{if(!$('done').hidden)renderDone();if(!$('v-list').hidden)renderList()},30000);
+  let dp=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;$('a_install').hidden=false});
+  $('a_install').onclick=async()=>{if(dp){dp.prompt();await dp.userChoice;dp=null;$('a_install').hidden=true}};
+}
+async function finishSetup(){
+  startApp();loadRosterChips();takeGps(true);await restoreCurrent();sync();
+}
+async function main(){
+  bindAll();
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  fillRosterSelect($('s_sel'),$('s_otro_l'),'');
+  if(!AJ.clave){show('setup');setChip();if(online)call('ping',null,'x').then(r=>{}).catch(()=>{});return}
+  startApp();
+  const rest=await restoreCurrent();
+  if(!rest)takeGps(true);
+  limpiar().catch(()=>{});
+  sync();
+  if(online)pingRoster(AJ.clave).then(r=>{if(r&&r.ok){loadRosterChips()}}).catch(()=>{});
+  loadRosterChips();
+}
+function loadRosterChips(){
+  const names=AJ.roster||[];$('pers').innerHTML='';$('g-pers').hidden=!names.length;
+  names.forEach(n=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=n;b.setAttribute('aria-pressed',sel.pers.has(n));
+    b.onclick=()=>{sel.pers.has(n)?sel.pers.delete(n):sel.pers.add(n);b.setAttribute('aria-pressed',sel.pers.has(n));if(sel.pers.size)$('uni').value=sel.pers.size;autosave()};$('pers').appendChild(b)});
+}
+main();
+</script>
+</body>
+</html>
