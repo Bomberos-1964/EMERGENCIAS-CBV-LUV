@@ -1,8 +1,8 @@
 /* Service worker: deja la aplicación disponible sin internet. */
-const V = 'cbv-campo-v1';
-const BASE = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+const V = 'cbv-campo-v2';
+const BASE = ['./', 'index.html', 'config.js', 'esquema.js', 'jszip.min.js', 'gen.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'plantillas/reporte_emergencias.xlsx'];
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(V).then(c => c.addAll(BASE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(V).then(c => Promise.all(BASE.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim()));

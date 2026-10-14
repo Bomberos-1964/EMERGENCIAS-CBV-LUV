@@ -18,6 +18,10 @@
   }
   const na = v => (v == null || String(v).trim() === '') ? 'N/A' : String(v);
   const durOf = r => r.dur_txt || durTxt(r.durmin);
+  /* Listas del formato de cargue masivo de incendios forestales (SNIF) */
+  const SNIF_TIPO = { C: 'Copa', O: 'Otros', SUP: 'Superficial', M: 'Mixto', SUB: 'Subterráneo', NS: 'No seleccionado' };
+  const SNIF_CAUSA = { Q: 'Quemas fuera de control', D: 'Descuido y negligencia', A: 'Accidental', R: 'Reactivación de focos', O: 'Otros', I: 'Intencional', SID: 'Sin definir' };
+  const SNIF_AREA = { BND: 'Bosque Natural Denso', BP: 'Bosque plantado', BS: 'Bosque Seco', C: 'Cultivos', P: 'Páramos', BI: 'Bosque intervenido', R: 'Rastrojos', VS: 'Vegetación Seca', SBN_PST: 'Sabanas pastizales', PST_MNJ: 'Pastos manejados', CBR_SIN_DTR: 'Coberturas sin determinar', SP: 'Sabanas y pastizales', PM: 'Pastos mejorados' };
   const coordOf = r => r.coord || ((r.lat != null && r.lat !== '' && r.lon != null && r.lon !== '') ? r.lat + ', ' + r.lon : '');
   const sortRows = rows => rows.slice().sort((a, b) => (a.fecha + (a.hora || '')).localeCompare(b.fecha + (b.hora || '')));
 
@@ -218,6 +222,8 @@
     if (r.hsal) obs.push('Salida de estación: ' + r.hsal + '.');
     if (r.hfin) obs.push('Fin del servicio: ' + r.hfin + '.');
     if (r.area) obs.push('Área afectada: ' + r.area + (r.veg ? ' (' + r.veg + ')' : '') + '.');
+    if (r.inc && (r.inc.tipo || r.inc.causa || r.inc.areaTipo)) { const i = r.inc; obs.push('Incendio forestal: tipo ' + (SNIF_TIPO[i.tipo] || na(i.tipo)) + ', causa ' + (SNIF_CAUSA[i.causa] || na(i.causa)) + ', cobertura ' + (SNIF_AREA[i.areaTipo] || na(i.areaTipo)) + '. Área protegida de orden nacional: ' + na(i.prot) + (i.protNom ? ' (' + i.protNom + ')' : '') + '.'); }
+    if (r.extraTxt) obs.push(r.extraTxt);
     if (fuera.length) obs.push('Otros vehículos: ' + fuera.join(', '));
     if (!(rp.les || []).length && r.lesionados) obs.push('Lesionados: ' + r.lesionados + (r.trasladado ? ' (trasladado a ' + r.trasladado + ')' : ''));
     if (r.canal) obs.push('Aviso recibido por: ' + r.canal + (r.rep ? ' (' + r.rep + ')' : '') + '.');
@@ -393,5 +399,52 @@
     return out(zip);
   }
 
-  g.GEN = { CATS, MESES, durTxt, dmy, comandancia, actividades, reporteEmergencia, fotografico, estadistica };
+
+  /* ---------- 5. FORMATO CARGUE MASIVO INCENDIOS FORESTALES (SNIF) ---------- */
+  function dms(v) {
+    const a = Math.abs(+v); let g = Math.floor(a); const mf = (a - g) * 60; let m = Math.floor(mf); let sec = Math.round((mf - m) * 60 * 100) / 100;
+    if (sec >= 60) { sec = 0; m += 1; } if (m >= 60) { m = 0; g += 1; }
+    return { g, m, s: sec };
+  }
+  const horaNum = h => { const m = /^(\d{1,2}):(\d{2})/.exec(String(h || '')); return m ? (+m[1] * 60 + +m[2]) / 1440 : null; };
+  /* items: [{id?, vereda, prot, protNom, fini, hini, ffin, hfin, tipo, causa, areaTipo, area, obs, lat, lon, latg.. (opcional, ya en grados/minutos/segundos)}] */
+  async function incendiosSNIF(JSZip, tpl, { items, depto, municipio, lonNegativa }) {
+    const zip = await load(JSZip, tpl);
+    let s = await zip.file('xl/worksheets/sheet1.xml').async('string');
+    // estilos por columna tomados de la fila 10 de la plantilla
+    const r10 = s.match(/<row r="10"[^>]*>([\s\S]*?)<\/row>/);
+    const st = {};
+    if (r10) { const re = /<c r="([A-Z]+)10"(?: s="(\d+)")?/g; let m; while ((m = re.exec(r10[1]))) st[m[1]] = m[2] != null ? m[2] : null; }
+    const S = c => (st[c] != null ? st[c] : null);
+    const rows = [];
+    let maxId = 0; items.forEach(it => { if (it.id && +it.id > maxId) maxId = +it.id; });
+    items.forEach((it, i) => {
+      const n = 10 + i, id = it.id ? +it.id : ++maxId, c = [];
+      const txt = (col, v) => { if (v != null && String(v).trim() !== '') c.push(istr(col + n, S(col), v)); else c.push(`<c r="${col}${n}"${S(col) != null ? ` s="${S(col)}"` : ''}/>`); };
+      const num = (col, v) => { if (v != null && v !== '' && !isNaN(+v)) c.push(numc(col + n, S(col), +v)); else c.push(`<c r="${col}${n}"${S(col) != null ? ` s="${S(col)}"` : ''}/>`); };
+      c.push(numc('A' + n, S('A'), id));
+      txt('B', it.depto || depto || 'VALLE DEL CAUCA'); txt('C', it.mun || municipio || 'LA UNIÓN'); txt('D', it.vereda);
+      txt('E', it.prot === 'SI' || it.prot === 'S' ? 'SI' : 'NO'); txt('F', it.prot === 'SI' || it.prot === 'S' ? it.protNom : '');
+      const dt = (col, iso) => { if (/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) c.push(numc(col + n, S(col), serial(iso))); else txt(col, ''); };
+      const hr = (col, h) => { const f = horaNum(h); if (f != null) c.push(numc(col + n, S(col), f)); else txt(col, '—'); };
+      dt('G', it.fini); hr('H', it.hini); dt('I', it.ffin || it.fini); hr('J', it.hfin);
+      const tipo = SNIF_TIPO[it.tipo] ? it.tipo : 'SUP', causa = SNIF_CAUSA[it.causa] ? it.causa : 'SID', at = SNIF_AREA[it.areaTipo] ? it.areaTipo : 'CBR_SIN_DTR';
+      txt('K', tipo); txt('L', SNIF_TIPO[tipo]); txt('M', causa); txt('N', SNIF_CAUSA[causa]); txt('O', at);
+      num('P', it.area); txt('Q', it.obs);
+      let la = null, lo = null;
+      if (it.latg != null && it.latg !== '') { la = { g: it.latg, m: it.latm, s: it.lats }; lo = { g: it.long, m: it.lonm, s: it.lons }; }
+      else if (it.lat != null && it.lat !== '' && it.lon != null && it.lon !== '' && !isNaN(+it.lat) && !isNaN(+it.lon)) { la = dms(it.lat); lo = dms(it.lon); if (lonNegativa && +it.lon < 0) lo.g = -lo.g; }
+      if (la) { num('R', la.g); num('S', la.m); num('T', la.s); num('U', lo.g); num('V', lo.m); num('W', lo.s); } else { ['R', 'S', 'T', 'U', 'V', 'W'].forEach(col => txt(col, '')); }
+      rows.push(`<row r="${n}" spans="1:23">${c.join('')}</row>`);
+    });
+    s = s.replace(/<row r="(\d+)"[^>]*?(?:\/>|>[\s\S]*?<\/row>)/g, (m, r) => (+r >= 10 ? '' : m));
+    s = s.replace('</sheetData>', rows.join('') + '</sheetData>');
+    const last = Math.max(10, 9 + items.length);
+    s = s.replace(/<dimension ref="[^"]*"\/>/, `<dimension ref="A1:W${last}"/>`);
+    s = s.replace(/<sheetView tabSelected="1" topLeftCell="[^"]*"/, '<sheetView tabSelected="1"').replace(/<selection [^>]*\/>/, '<selection activeCell="A10" sqref="A10"/>');
+    zip.file('xl/worksheets/sheet1.xml', s);
+    return out(zip);
+  }
+
+  g.GEN = { CATS, MESES, durTxt, dmy, comandancia, actividades, reporteEmergencia, fotografico, estadistica, incendiosSNIF, SNIF_TIPO, SNIF_CAUSA, SNIF_AREA, dms };
 })(typeof window !== 'undefined' ? window : globalThis);
