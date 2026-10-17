@@ -12,13 +12,19 @@
     area: [['BND','Bosque Natural Denso'],['BP','Bosque plantado'],['BS','Bosque Seco'],['C','Cultivos'],['P','Páramos'],['BI','Bosque intervenido'],['R','Rastrojos'],['VS','Vegetación Seca'],['SBN_PST','Sabanas pastizales'],['PST_MNJ','Pastos manejados'],['CBR_SIN_DTR','Coberturas sin determinar'],['SP','Sabanas y pastizales'],['PM','Pastos mejorados']]
   };
   const YN = ['SI', 'NO'];
+  /* Sistema de Comando de Incidentes: funciones y apoyos. No se activa todo en todos los incidentes. */
+  const SCI_ROLES = [['ci','Comandante del incidente','Asume el mando y todas las funciones que no delegue'],['seg','Oficial de seguridad','Vigila los riesgos y la seguridad del personal'],['inf','Oficial de información pública','Atiende a la prensa y a la comunidad'],['enl','Oficial de enlace','Coordina con otras instituciones'],['ops','Jefe de operaciones','Dirige las acciones tácticas en la escena'],['pla','Jefe de planificación','Recoge información y prepara el plan'],['log','Jefe de logística','Provee recursos, equipos y servicios'],['adm','Jefe de administración y finanzas','Costos, tiempos y compras']];
+  const SCI_FUNC = ['Ataque / extinción','Rescate','Atención prehospitalaria','Suministro de agua','Control de tráfico y seguridad','Búsqueda y reconocimiento','Apoyo logístico','Reserva (en espera)','Otra función'];
+  const SCI_NOACT = 'No se activó (la asumió el comandante)';
+  /* Los 8 pasos del primer respondedor al llegar a la escena (SCI) */
+  const SCI_PASOS = ['Informar a su base de su arribo a la escena','Asumir el mando y establecer el Puesto de Comando (PC)','Evaluar la situación','Establecer su perímetro de seguridad','Establecer sus objetivos','Determinar las estrategias','Determinar la necesidad de recursos y posibles instalaciones','Preparar la información para transferir el mando'];
   const CANAL = ['Llamada telefónica','Radio','Personal en la estación','Policía o autoridad','Redes o WhatsApp','De oficio'];
   const PTIPO = ['Vivienda','Finca','Comercial','Agrícola','Vía pública','Lote baldío','Industrial','Otro'];
   const INST = [['dc','Defensa Civil'],['cr','Cruz Roja'],['pn','Policía Nacional'],['pcar','Policía de Carreteras'],['hosp','Hospitales']];
   const LISTAS = {
     les:  { max: 6,  cols: [['n','Nombre'],['d','Documento'],['e','Edad','number'],['t','Trasladado a'],['p','Trasladado por']], no: 'No hubo lesionados' },
     vimp: { max: 4,  cols: [['c','Conductor'],['d','Documento'],['v','Vehículo'],['col','Color'],['pl','Placa']], no: 'No hubo vehículos implicados' },
-    acc:  { max: 57, cols: [['h','Hora','time'],['a','Acción realizada']], no: 'Sin acciones que registrar' }
+    acc:  { max: 57, cols: [['h','Hora','time'],['a','Acción realizada']], no: '' }
   };
   const F = (p, l, t, x) => Object.assign({ p, l, t }, x || {});
   const STEPS = [
@@ -74,12 +80,13 @@
     { id: 'r_inst', t: '6e · Reporte: instituciones que apoyaron', f: INST.map(([k, n]) => F('rpt.inst.' + k, n, 'pair', { hint: 'Unidades y vehículos que enviaron' })) },
     { id: 'r_les', t: '6f · Reporte: lesionados', f: [ F('rpt.les', 'Lesionados', 'list', { lista: 'les' }) ] },
     { id: 'r_vimp', t: '6g · Reporte: vehículos implicados', f: [ F('rpt.vimp', 'Vehículos implicados', 'list', { lista: 'vimp' }) ] },
-    { id: 'r_acc', t: '6h · Reporte: resumen de las acciones', f: [ F('rpt.acc', 'Acciones realizadas', 'list', { lista: 'acc' }) ] },
-    { id: 'r_cmd', t: '6i · Reporte: quién comandó', f: [
+    { id: 'r_sci', t: '6h · Reporte: organización del incidente (SCI)', f: [ F('rpt.sci', 'Organigrama del incidente', 'sci', { hint: 'Quién cumplió cada función del Sistema de Comando de Incidentes y qué hizo cada unidad.' }) ] },
+    { id: 'r_acc', t: '6i · Reporte: bitácora y resumen de las acciones', f: [ F('rpt.acc', 'Acciones realizadas con su hora (obligatorio)', 'list', { lista: 'acc', naOk: false, hint: 'Cada acción con su hora. Puede ir llenándola en vivo con el botón «Bitácora».' }) ] },
+    { id: 'r_cmd', t: '6j · Reporte: quién comandó', f: [
       F('rpt.cmd.n', 'Nombres y apellidos', 'text', { naOk: false }),
       F('rpt.cmd.g', 'Grado', 'text'),
       F('rpt.cmd.c', 'Cargo', 'text') ] },
-    { id: 'r_obs', t: '6j · Reporte: observaciones adicionales', f: [ F('rpt.obs', 'Observaciones adicionales', 'area') ] }
+    { id: 'r_obs', t: '6k · Reporte: observaciones adicionales', f: [ F('rpt.obs', 'Observaciones adicionales', 'area') ] }
   ];
-  g.CBV_ESQ = { CATS, TIPOS, VEH, SNIF, YN, CANAL, PTIPO, INST, LISTAS, STEPS };
+  g.CBV_ESQ = { CATS, TIPOS, VEH, SNIF, YN, CANAL, PTIPO, INST, LISTAS, STEPS, SCI_ROLES, SCI_FUNC, SCI_NOACT, SCI_PASOS };
 })(typeof window !== 'undefined' ? window : globalThis);

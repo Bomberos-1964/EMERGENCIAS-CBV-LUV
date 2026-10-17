@@ -16,6 +16,17 @@
     const h = Math.floor(min / 60), m = min % 60;
     return h + (h === 1 ? ' HORA' : ' HORAS') + (m ? ' Y ' + m + ' MINUTOS' : '');
   }
+  /* hora siempre como HH:mm (24 h), venga como venga */
+  const h24 = v => {
+    if (v == null || v === '') return '';
+    if (v instanceof Date) return String(v.getUTCHours()).padStart(2, '0') + ':' + String(v.getUTCMinutes()).padStart(2, '0');
+    if (typeof v === 'number' && v >= 0 && v < 1) { const m = Math.round(v * 1440); return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+    const t = String(v); let m = /(?:^|T)(\d{1,2}):(\d{2})/.exec(t);
+    return m ? String(+m[1]).padStart(2, '0') + ':' + m[2] : t;
+  };
+  const dmsTxt = (v, pos, neg) => { const a = Math.abs(+v); let g = Math.floor(a); const mf = (a - g) * 60; let m = Math.floor(mf); let sec = Math.round((mf - m) * 600) / 10; if (sec >= 60) { sec = 0; m++; } if (m >= 60) { m = 0; g++; } return g + '°' + String(m).padStart(2, '0') + "'" + (sec < 10 ? '0' : '') + sec.toFixed(1) + '"' + (+v < 0 ? neg : pos); };
+  const gmsLat = v => (v === '' || v == null || !isFinite(+v)) ? '' : dmsTxt(+v, 'N', 'S');
+  const gmsLon = v => (v === '' || v == null || !isFinite(+v)) ? '' : dmsTxt(+v, 'E', 'W');
   const na = v => (v == null || String(v).trim() === '') ? 'N/A' : String(v);
   const durOf = r => r.dur_txt || durTxt(r.durmin);
   /* Listas del formato de cargue masivo de incendios forestales (SNIF) */
@@ -161,9 +172,9 @@
     const seq = String((r.id || '').split('-').pop() || '').padStart(6, '0').slice(-6);
     ['B', 'C', 'D', 'E', 'F', 'G'].forEach((c, i) => { s = setCell(s, c + '8', seq[i]); });
     if (r.fecha) { s = setCell(s, 'K9', r.fecha.slice(8, 10)); s = setCell(s, 'L9', r.fecha.slice(5, 7)); s = setCell(s, 'M9', r.fecha.slice(2, 4)); }
-    if (r.hora) s = setCell(s, 'N9', r.hora);
+    if (r.hora) s = setCell(s, 'N9', h24(r.hora));
     s = setCell(s, 'F19', r.cat);
-    if (r.hora) s = setCell(s, 'F20', r.hora);
+    if (r.hora) s = setCell(s, 'F20', h24(r.hora));
     const maq = { 'T-1': 'B21', 'B-2': 'C21', 'B-3': 'D21', 'B-4': 'E21', 'L-1': 'F21', 'L-2': 'G21', 'L-3': 'H21' };
     const lab = { B21: 'T1', C21: 'B2', D21: 'B3', E21: 'B4', F21: 'L1', G21: 'L2', H21: 'L3' };
     const vs = String(r.veh || '').split(/[,/;]+/).map(x => x.trim().toUpperCase().replace(/\s+/g, '').replace(/^([A-Z])(\d)$/, '$1-$2')).filter(Boolean);
@@ -174,8 +185,8 @@
     s = setCell(s, 'J23', 'VALLE DEL CAUCA');
     s = setCell(s, 'N23', 'LA UNIÓN');
     const lat = r.lat != null && r.lat !== '' ? String(r.lat) : '', lon = r.lon != null && r.lon !== '' ? String(r.lon) : '';
-    if (lat) s = setCell(s, 'I24', lat);
-    if (lon) s = setCell(s, 'M24', lon);
+    if (lat) s = setCell(s, 'I24', gmsLat(lat) || lat);
+    if (lon) s = setCell(s, 'M24', gmsLon(lon) || lon);
     if (!lat && r.coord) s = setCell(s, 'I24', r.coord);
     const rp = r.rpt || {};
     const wrap = (txt, n, max) => { const out = ['', '', '', '']; let li = 0, over = false; String(txt || '').split(/\s+/).filter(Boolean).forEach(w => { if (over) return; if ((out[li] + ' ' + w).trim().length > n) { li++; if (li >= max) { over = true; return; } } out[li] = (out[li] + ' ' + w).trim(); }); return { out, over }; };
@@ -187,7 +198,7 @@
     if (pm[prop.tipo]) s = put(s, pm[prop.tipo], 'X');
     s = put(s, 'I16', prop.nom); s = put(s, 'I17', prop.doc); s = put(s, 'M17', prop.tel);
     // 2. incidente
-    s = put(s, 'N20', r.hlle);
+    s = put(s, 'N20', h24(r.hlle));
     if (rp.zona === 'URBANA') s = put(s, 'D23', 'X'); if (rp.zona === 'RURAL') s = put(s, 'G23', 'X');
     s = put(s, 'G25', rp.pc); s = put(s, 'G26', rp.pcid); s = put(s, 'G27', rp.ae); s = put(s, 'G28', rp.acv);
     // 3. evaluación inicial
@@ -209,7 +220,7 @@
     // 6. vehículos implicados (hasta 4)
     (rp.vimp || []).slice(0, 4).forEach((x, i) => { const n = 3 + i; s = put(s, 'P' + n, x.c); s = put(s, 'Q' + n, x.d); s = put(s, 'R' + n, x.v); s = put(s, 'T' + n, x.col); s = put(s, 'U' + n, x.pl); });
     // 9. resumen de acciones (hasta 57 filas)
-    (rp.acc || []).slice(0, 57).forEach((x, i) => { const n = 3 + i; s = put(s, 'V' + n, x.h); s = put(s, 'X' + n, x.a); });
+    (rp.acc || []).slice(0, 57).forEach((x, i) => { const n = 3 + i; s = put(s, 'V' + n, h24(x.h)); s = put(s, 'X' + n, x.a); });
     // 10. unidad que comandó
     const cm = rp.cmd || {}; s = put(s, 'AD4', cm.n); s = put(s, 'AG4', cm.g); s = put(s, 'AH4', cm.c);
     // 11. unidades que intervinieron (12 nombres, dos columnas)
@@ -219,8 +230,8 @@
     if (rp.obs) obs.push(rp.obs);
     if (d.over) obs.push('Descripción: ' + r.desc);
     obs.push(`Duración: ${durOf(r)}. Unidades que asistieron: ${na(r.uni)}. Vehículos: ${na(r.veh)}.`);
-    if (r.hsal) obs.push('Salida de estación: ' + r.hsal + '.');
-    if (r.hfin) obs.push('Fin del servicio: ' + r.hfin + '.');
+    if (r.hsal) obs.push('Salida de estación: ' + h24(r.hsal) + ' h.');
+    if (r.hfin) obs.push('Fin del servicio: ' + h24(r.hfin) + ' h.');
     if (r.area) obs.push('Área afectada: ' + r.area + (r.veg ? ' (' + r.veg + ')' : '') + '.');
     if (r.inc && (r.inc.tipo || r.inc.causa || r.inc.areaTipo)) { const i = r.inc; obs.push('Incendio forestal: tipo ' + (SNIF_TIPO[i.tipo] || na(i.tipo)) + ', causa ' + (SNIF_CAUSA[i.causa] || na(i.causa)) + ', cobertura ' + (SNIF_AREA[i.areaTipo] || na(i.areaTipo)) + '. Área protegida de orden nacional: ' + na(i.prot) + (i.protNom ? ' (' + i.protNom + ')' : '') + '.'); }
     if (r.extraTxt) obs.push(r.extraTxt);
@@ -230,9 +241,179 @@
     if (!r.rpt) obs.push('Datos completados desde el registro ' + (r.id || '') + '. Faltan los demás campos del formato.');
     const chunk = []; obs.join(' ').match(/.{1,70}(\s|$)/g).forEach(x => chunk.push(x.trim()));
     ['AD15', 'AD16', 'AD17', 'AD18', 'AD19', 'AD20'].forEach((ref, i) => { if (chunk[i]) s = setCell(s, ref, chunk[i]); });
+    // 7. organización del incidente (SCI) dentro de los recuadros del formato
+    let dr = await zip.file('xl/drawings/drawing1.xml').async('string');
+    dr = organigrama(dr, rp.sci || {}, rp.cmd || {}, r);
+    // 14. registro fotográfico
+    const fotos = (r.fotos || []).filter(f => f && f.data);
+    if (fotos.length) s = await fotosReporte(zip, s, dr, fotos, r);
+    else zip.file('xl/drawings/drawing1.xml', dr);
     zip.file('xl/worksheets/sheet1.xml', s);
     await forceCalc(zip);
     return out(zip);
+  }
+
+  /* texto dentro de un recuadro (forma) del dibujo, por nombre */
+  function textoForma(dr, nombre, lineas) {
+    const i = dr.indexOf('name="' + nombre + '"'); if (i < 0) return dr;
+    const a = dr.indexOf('<xdr:txBody>', i), b = dr.indexOf('</xdr:txBody>', a); if (a < 0 || b < 0) return dr;
+    const ps = lineas.filter(l => l && l.t).map(l => `<a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="es-CO" sz="${l.sz || 700}"${l.b ? ' b="1"' : ''}/><a:t>${X(l.t)}</a:t></a:r></a:p>`).join('') || '<a:p><a:endParaRPr lang="es-CO" sz="700"/></a:p>';
+    const body = '<xdr:txBody><a:bodyPr vertOverflow="clip" horzOverflow="clip" lIns="18000" tIns="18000" rIns="18000" bIns="18000" rtlCol="0" anchor="ctr"/><a:lstStyle/>' + ps;
+    return dr.slice(0, a) + body + dr.slice(b);
+  }
+  function organigrama(dr, sci, cmd, r) {
+    const noAct = /no se activ/i;
+    const nom = k => { const v = sci[k]; return v && !noAct.test(v) ? v : ''; };
+    const rol = (t, k) => [{ t, b: 1, sz: 650 }, { t: nom(k) || (k === 'ci' ? (sci.ci || cmd.n || '') : 'No activado'), sz: 750 }];
+    dr = textoForma(dr, '3 Rectángulo', rol('COMANDANTE DEL INCIDENTE', 'ci'));
+    dr = textoForma(dr, '8 Rectángulo', rol('Oficial de seguridad', 'seg'));
+    dr = textoForma(dr, '9 Rectángulo', rol('Oficial de información pública', 'inf'));
+    dr = textoForma(dr, '10 Rectángulo', rol('Oficial de enlace', 'enl'));
+    const grupos = (sci.grupos || []).filter(g => g && g.u);
+    const ops = rol('JEFE DE OPERACIONES', 'ops');
+    grupos.slice(0, 6).forEach(g => ops.push({ t: g.u + ': ' + (g.f || '') + (g.n ? ' (' + g.n + ')' : ''), sz: 600 }));
+    dr = textoForma(dr, '60 Rectángulo', ops);
+    dr = textoForma(dr, '61 Rectángulo', rol('JEFE DE PLANIFICACIÓN', 'pla'));
+    dr = textoForma(dr, '62 Rectángulo', rol('JEFE DE LOGÍSTICA', 'log'));
+    dr = textoForma(dr, '63 Rectángulo', rol('JEFE DE ADMON. Y FINANZAS', 'adm'));
+    return dr;
+  }
+
+  /* geometría de la hoja (ancho de columnas y alto de filas) para ubicar fotos */
+  function geom(s) {
+    const cw = {}; let m; const re = /<col min="(\d+)" max="(\d+)" width="([\d.]+)"/g;
+    while ((m = re.exec(s))) for (let c = +m[1]; c <= Math.min(+m[2], 80); c++) cw[c] = Math.round(+m[3] * 7 * 9525);
+    return cw;
+  }
+  const ROW_EMU = Math.round(14.95 * 12700);
+  const picAnchor = (id, rid, col, colOff, row, rowOff, W, H, name) => `<xdr:oneCellAnchor><xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>${colOff}</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>${rowOff}</xdr:rowOff></xdr:from><xdr:ext cx="${W}" cy="${H}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${id}" name="${X(name)}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${W}" cy="${H}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+  const fit = (f, maxW, maxH) => { const sc = Math.min(maxW / f.w, maxH / f.h); return [Math.round(f.w * sc), Math.round(f.h * sc)]; };
+
+  async function fotosReporte(zip, s, dr, fotos, r) {
+    const cw = geom(s);
+    const x0 = 30, wTot = [30, 31, 32, 33, 34, 35, 36, 37].reduce((a, c) => a + (cw[c] || 0), 0);   // columnas AD..AK
+    const slotW = Math.floor(wTot / 2) - 60000, maxH = 14 * ROW_EMU - 40000;
+    const colAt = px => { let c = x0, acc = 0; while (c < 37 && acc + cw[c] <= px) { acc += cw[c]; c++; } return [c - 1, px - acc]; };   // índice base 0
+    let rels = await zip.file('xl/drawings/_rels/drawing1.xml.rels').async('string');
+    let ct = await zip.file('[Content_Types].xml').async('string');
+    if (!/Extension="jpeg"/.test(ct)) ct = ct.replace('<Default Extension="png"', '<Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png"');
+    let anchors = '', id = 900;
+    const quedan = [];
+    fotos.forEach((f, i) => {
+      const n = i + 1;
+      if (i >= 4) { quedan.push(f); return; }
+      const col = i % 2, fila = i >> 1, [W, H] = fit(f, slotW, maxH);
+      const px = col * (Math.floor(wTot / 2)) + Math.floor((slotW - W) / 2) + 30000;
+      const [c, off] = colAt(px);
+      const row0 = 26 + fila * 16;                 // base 0: fila 27 y fila 43
+      const name = 'media/repfoto' + n + '.jpeg', rid = 'rIdRf' + n;
+      zip.file('xl/' + name, f.data);
+      rels = rels.replace('</Relationships>', `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../${name}"/></Relationships>`);
+      anchors += picAnchor(id++, rid, c, off, row0, 20000, W, H, 'Foto ' + n);
+      const capRow = row0 + 2 + Math.ceil((H + 20000) / ROW_EMU), capCell = (col ? 'AH' : 'AD') + capRow;
+      if (capRow <= 59) { try { s = put(s, capCell, n + '. ' + String(f.desc || '').slice(0, 60)); } catch (e) { /* sin leyenda */ } }
+    });
+    dr = dr.replace('</xdr:wsDr>', anchors + '</xdr:wsDr>');
+    zip.file('xl/drawings/drawing1.xml', dr);
+    zip.file('xl/drawings/_rels/drawing1.xml.rels', rels);
+    if (quedan.length) ct = await hojaFotos(zip, ct, quedan, 5, r);
+    zip.file('[Content_Types].xml', ct);
+    return s;
+  }
+
+  /* hoja adicional con el resto de las fotografías (2 por fila, 3 filas por página) */
+  async function hojaFotos(zip, ct, fotos, desde, r) {
+    let rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+    const colW = 48, cwE = Math.round(colW * 7 * 9525), rowPhoto = 200, rowCap = 18;   // puntos
+    let anchors = '', rows = `<row r="1" ht="22" customHeight="1"><c r="A1" t="inlineStr"><is><t>${X('REGISTRO FOTOGRÁFICO DEL INCIDENTE · ' + (r.id || ''))}</t></is></c></row>`;
+    const maxW = cwE - 120000, maxH = Math.round(rowPhoto * 12700) - 60000;
+    const brks = [];
+    fotos.forEach((f, i) => {
+      const k = i >> 1, col = i % 2, rp = 2 + k * 2, n = desde + i;
+      if (col === 0) { rows += `<row r="${rp}" ht="${rowPhoto}" customHeight="1"/><row r="${rp + 1}" ht="${rowCap}" customHeight="1">__CAP${rp + 1}__</row>`; if (k > 0 && k % 3 === 0) brks.push(rp - 1); }
+      const [W, H] = fit(f, maxW, maxH);
+      const name = 'media/repfoto' + n + '.jpeg', rid = 'rIdRf' + n;
+      zip.file('xl/' + name, f.data);
+      rels += `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../${name}"/>`;
+      anchors += picAnchor(950 + i, rid, col, Math.floor((cwE - W) / 2), rp - 1, 30000, W, H, 'Foto ' + n);
+      const cap = `<c r="${col ? 'B' : 'A'}${rp + 1}" t="inlineStr"><is><t xml:space="preserve">${X(n + '. ' + String(f.desc || '').slice(0, 70))}</t></is></c>`;
+      rows = rows.replace('__CAP' + (rp + 1) + '__', cap + (col ? '' : '__CAP' + (rp + 1) + '__'));
+    });
+    rows = rows.replace(/__CAP\d+__/g, '');
+    const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><cols><col min="1" max="2" width="${colW}" customWidth="1"/></cols><sheetData>${rows}</sheetData><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup orientation="portrait" fitToHeight="0"/>${brks.length ? '<rowBreaks count="' + brks.length + '" manualBreakCount="' + brks.length + '">' + brks.map(b => `<brk id="${b}" max="16383" man="1"/>`).join('') + '</rowBreaks>' : ''}<drawing r:id="rId1"/></worksheet>`;
+    zip.file('xl/worksheets/sheet3.xml', sheet);
+    zip.file('xl/worksheets/_rels/sheet3.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing2.xml"/></Relationships>');
+    zip.file('xl/drawings/drawing2.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' + anchors + '</xdr:wsDr>');
+    zip.file('xl/drawings/_rels/drawing2.xml.rels', rels + '</Relationships>');
+    let wb = await zip.file('xl/workbook.xml').async('string');
+    wb = wb.replace('</sheets>', '<sheet name="FOTOS ADICIONALES" sheetId="9" r:id="rId9"/></sheets>');
+    zip.file('xl/workbook.xml', wb);
+    let wr = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+    wr = wr.replace('</Relationships>', '<Relationship Id="rId9" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/></Relationships>');
+    zip.file('xl/_rels/workbook.xml.rels', wr);
+    return ct.replace('</Types>', '<Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/drawings/drawing2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+  }
+
+
+  /* ---------- Reporte de Emergencias listo para imprimir (misma estructura del formato) ---------- */
+  function reporteHTML(r, o) {
+    o = o || {};
+    const E = x => X(x == null ? '' : x), v = x => (x == null || x === '' ? '' : E(x));
+    const rp = r.rpt || {}, sci = rp.sci || {}, prop = rp.prop || {}, esc = rp.esc || {}, ins = rp.inst || {}, cmd = rp.cmd || {};
+    const noAct = /no se activ/i, nm = k => (sci[k] && !noAct.test(sci[k]) ? sci[k] : 'No activado');
+    const seq = String((r.id || '').split('-').pop() || '').padStart(6, '0').slice(-6);
+    const f = r.fecha || '';
+    const row = (a, b) => `<tr><th>${a}</th><td colspan="3">${b}</td></tr>`;
+    const chk = (c, t) => `<span class="ck">${c ? '☒' : '☐'} ${E(t)}</span>`;
+    const insV = k => { const a = ins[k] || []; return (a[0] || a[0] === 0 ? a[0] : '') + ' unid. / ' + (a[1] || a[1] === 0 ? a[1] : '') + ' veh.'; };
+    const vehs = String(r.veh || '').split(/[,/;]+/).map(x => x.trim()).filter(Boolean);
+    const pers = (r.pers || []).slice(0, 24);
+    const lat = gmsLat(r.lat), lon = gmsLon(r.lon);
+    const acc = (rp.acc || []).slice().sort((a, b) => h24(a.h).localeCompare(h24(b.h)));
+    const fotos = o.fotos || r.fotos || [];
+    const css = `@page{size:A4;margin:10mm}*{box-sizing:border-box}body{font:10.5px/1.3 Arial,Helvetica,sans-serif;color:#000;margin:0}h1,h2{margin:0}.hd{display:grid;grid-template-columns:80px 1fr 80px;align-items:center;border:1.5px solid #000;padding:4px}.hd img{max-height:64px;max-width:76px}.hd .t{text-align:center;font-weight:700;font-size:13px}table{border-collapse:collapse;width:100%;margin-top:4px;page-break-inside:avoid}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top;text-align:left}th{background:#eee;width:23%;font-weight:700}.sec{background:#222;color:#fff;font-weight:700;text-align:center;padding:3px;margin-top:6px;border:1px solid #000;page-break-after:avoid}.ck{margin-right:12px;white-space:nowrap}.org{display:grid;gap:6px;justify-items:center;border:1px solid #000;padding:6px;margin-top:4px;page-break-inside:avoid}.bx{border:1.5px solid #000;padding:4px 8px;text-align:center;min-width:130px}.bx b{display:block;font-size:9px}.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.ph{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}.ph figure{margin:0;border:1px solid #000;padding:4px;text-align:center;page-break-inside:avoid}.ph img{max-width:100%;max-height:230px}.ph figcaption{font-size:9.5px}.sign{height:46px}`;
+    const gr = (sci.grupos || []).map(g => `<div class="bx"><b>Unidad ${E(g.u)}</b>${E(g.f || '')}${g.n ? '<br>' + E(g.n) : ''}</div>`).join('');
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte de Emergencias ${E(r.id)}</title><style>${css}</style></head><body>
+<div class="hd">${o.logo1 ? `<img src="${o.logo1}" alt="">` : '<span></span>'}<div class="t">CUERPO DE BOMBEROS VOLUNTARIOS<br>LA UNION - VALLE DEL CAUCA<br><br>REPORTE DE EMERGENCIAS</div>${o.logo2 ? `<img src="${o.logo2}" alt="">` : '<span></span>'}</div>
+<table><tr><th>INCIDENTE N°</th><td style="font-size:15px;font-weight:700;letter-spacing:.35em">${E(seq)}</td><th>Fecha y hora de elaboración</th><td>${E(f ? f.slice(8, 10) + '/' + f.slice(5, 7) + '/' + f.slice(2, 4) : '')} · ${E(h24(r.hora))} h</td></tr></table>
+<div class="sec">1. DATOS DE LA PROPIEDAD</div>
+<table><tr><th>Tipo de propiedad</th><td colspan="3">${['Vivienda', 'Finca', 'Comercial', 'Agrícola', 'Vía pública', 'Lote baldío', 'Industrial', 'Otro'].map(t => chk(prop.tipo === t, t)).join('')}</td></tr>${row('Nombre del propietario', v(prop.nom))}<tr><th>Documento de identidad</th><td>${v(prop.doc)}</td><th>N° de contacto</th><td>${v(prop.tel)}</td></tr></table>
+<div class="sec">2. DATOS DEL INCIDENTE</div>
+<table><tr><th>Tipo de incidente</th><td colspan="3"><b>${E(r.cat)}</b></td></tr><tr><th>Hora de reporte</th><td>${E(h24(r.hora))} h</td><th>Hora de llegada al sitio</th><td>${E(h24(r.hlle))}${r.hlle ? ' h' : ''}</td></tr>
+<tr><th>Máquinas</th><td colspan="3">${['T-1', 'B-2', 'B-3', 'B-4', 'L-1', 'L-2', 'L-3'].map(m => chk(vehs.some(x => x.toUpperCase().replace(/\s+/g, '').replace(/^([A-Z])(\d)$/, '$1-$2') === m), m)).join('')} ${E(vehs.filter(x => !/^[TBL][- ]?\d$/i.test(x)).join(', '))}</td></tr>
+<tr><th>Dirección</th><td colspan="3">${v(r.dir)}</td></tr><tr><th>Barrio / vereda</th><td colspan="3">${v(r.bar) || 'N/A'}</td></tr>
+<tr><th>Zona</th><td>${chk(rp.zona === 'URBANA', 'URBANA')}${chk(rp.zona === 'RURAL', 'RURAL')}</td><th>Departamento / municipio</th><td>VALLE DEL CAUCA · LA UNIÓN</td></tr>
+<tr><th>Coordenadas</th><td colspan="3">Latitud: <b>${E(lat)}</b> &nbsp; Longitud: <b>${E(lon)}</b></td></tr>
+${row('Ubicación del puesto de comando', v(rp.pc))}${row('Identificación del puesto de comando', v(rp.pcid))}${row('Ubicación del área de espera', v(rp.ae))}${row('Ubicación del A.C.V.', v(rp.acv))}</table>
+<div class="sec">3. EVALUACIÓN INICIAL DEL INCIDENTE</div>
+<table>${row('Descripción del incidente', v(r.desc))}${row('Amenazas del incidente', v(rp.amen))}${row('Objetivos iniciales', v(rp.obj))}
+<tr><th>Hubo alteración en la escena antes de la llegada de bomberos</th><td>${chk(esc.alt === 'SI', 'SI')}${chk(esc.alt === 'NO', 'NO')}</td><th>Cómo se alteró</th><td>${v(esc.altc)}</td></tr>
+<tr><th>Se realizó protección del área luego del arribo</th><td>${chk(esc.prot === 'SI', 'SI')}${chk(esc.prot === 'NO', 'NO')}</td><th>Cómo se realizó</th><td>${v(esc.protc)}</td></tr>
+<tr><th>Hubo personas que intervinieron antes de la llegada de bomberos</th><td>${chk(esc.int === 'SI', 'SI')}${chk(esc.int === 'NO', 'NO')}</td><th>Quiénes intervinieron</th><td>${v(esc.intc)}</td></tr></table>
+<div class="sec">4. INSTITUCIONES QUE INTERVIENEN Y APOYAN EN EL INCIDENTE</div>
+<table><tr><th>Defensa Civil</th><td>${insV('dc')}</td><th>Policía Carreteras</th><td>${insV('pcar')}</td></tr><tr><th>Cruz Roja</th><td>${insV('cr')}</td><th>Hospitales</th><td>${insV('hosp')}</td></tr><tr><th>Policía Nacional</th><td>${insV('pn')}</td><th></th><td></td></tr></table>
+<div class="sec">5. INFORMACIÓN DE LESIONADOS EN EL INCIDENTE</div>
+<table><tr><th>Nombre</th><th>Doc. identidad</th><th>Edad</th><th>Trasladado a / por</th></tr>${(rp.les || []).map(x => `<tr><td>${v(x.n)}</td><td>${v(x.d)}</td><td>${v(x.e)}</td><td>${v(x.t)}${x.p ? ' · ' + v(x.p) : ''}</td></tr>`).join('') || '<tr><td colspan="4">N/A</td></tr>'}</table>
+<div class="sec">6. INFORMACIÓN DE VEHÍCULOS IMPLICADOS</div>
+<table><tr><th>Conductor</th><th>Doc. identidad</th><th>Vehículo</th><th>Color / placa</th></tr>${(rp.vimp || []).map(x => `<tr><td>${v(x.c)}</td><td>${v(x.d)}</td><td>${v(x.v)}</td><td>${v(x.col)} ${v(x.pl)}</td></tr>`).join('') || '<tr><td colspan="4">N/A</td></tr>'}</table>
+<div class="sec">7. ORGANIZACIÓN DEL INCIDENTE (SCI)</div>
+<div class="org"><div class="bx"><b>COMANDANTE DEL INCIDENTE</b>${E(sci.ci || cmd.n || '')}</div>
+<div class="row"><div class="bx"><b>Oficial de seguridad</b>${E(nm('seg'))}</div><div class="bx"><b>Oficial de información pública</b>${E(nm('inf'))}</div><div class="bx"><b>Oficial de enlace</b>${E(nm('enl'))}</div></div>
+<div class="row"><div class="bx"><b>JEFE DE OPERACIONES</b>${E(nm('ops'))}</div><div class="bx"><b>JEFE DE PLANIFICACIÓN</b>${E(nm('pla'))}</div><div class="bx"><b>JEFE DE LOGÍSTICA</b>${E(nm('log'))}</div><div class="bx"><b>JEFE DE ADMON. Y FINANZAS</b>${E(nm('adm'))}</div></div>
+${gr ? `<div><b>Función de cada unidad</b></div><div class="row">${gr}</div>` : ''}</div>
+<div class="sec">8. BOSQUEJO O CROQUIS DEL LUGAR DEL INCIDENTE</div><table><tr><td style="height:110px"></td></tr></table>
+<div class="sec">9. RESUMEN DE LAS ACCIONES</div>
+<table><tr><th style="width:12%">HORA (24 h)</th><th>ACCIÓN REALIZADA</th></tr>${acc.map(x => `<tr><td>${E(h24(x.h))}</td><td>${v(x.a)}</td></tr>`).join('') || '<tr><td colspan="2">N/A</td></tr>'}</table>
+<div class="sec">10. UNIDAD QUE COMANDÓ EL INCIDENTE</div>
+<table><tr><th>Nombres y apellidos</th><th>Grado</th><th>Cargo</th><th>Firma</th></tr><tr><td>${v(cmd.n)}</td><td>${v(cmd.g)}</td><td>${v(cmd.c)}</td><td class="sign"></td></tr></table>
+<div class="sec">11. UNIDADES QUE INTERVINIERON EN EL INCIDENTE</div>
+<table><tr><td>${pers.map(p => E(p)).join('</td><td>').replace(/(<td>[^]*?){0}/, '')}</td></tr></table>
+<div class="sec">12. OBSERVACIONES ADICIONALES (LEGALES, DISCIPLINARIAS, NORMATIVAS O DE REQUERIMIENTOS Y NECESIDADES)</div>
+<table><tr><td>${v(rp.obs)}<br>Duración: ${E(durOf(r))}. Unidades que asistieron: ${E(na(r.uni))}. Vehículos: ${E(na(r.veh))}.${r.hsal ? ' Salida de estación: ' + E(h24(r.hsal)) + ' h.' : ''}${r.hfin ? ' Fin del servicio: ' + E(h24(r.hfin)) + ' h.' : ''}${r.area ? ' Área afectada: ' + E(r.area) + '.' : ''} ${E(r.extraTxt || '')}</td></tr></table>
+<div class="sec">13. RECEPCIÓN Y APROBACIÓN DEL INFORME</div>
+<table><tr><th>Guardia que recibe el informe</th><th>Grado</th><th>Estado en que recibe</th><th>Firma</th></tr><tr><td class="sign"></td><td></td><td>${chk(false, 'COMPLETO')}${chk(false, 'INCOMPLETO')}</td><td></td></tr></table>
+${fotos.length ? `<div class="sec" style="page-break-before:always">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><div class="ph">${fotos.map((p, i) => `<figure><img src="${p.src}" alt="Fotografía ${i + 1}"><figcaption>${i + 1}. ${E(p.desc || '')}</figcaption></figure>`).join('')}</div>` : '<div class="sec">14. REGISTRO FOTOGRÁFICO DEL INCIDENTE</div><table><tr><td>Sin fotografías.</td></tr></table>'}
+<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   }
 
   /* ---------- 4. REGISTRO FOTOGRÁFICO (plantilla Word) ---------- */
@@ -446,5 +627,5 @@
     return out(zip);
   }
 
-  g.GEN = { CATS, MESES, durTxt, dmy, comandancia, actividades, reporteEmergencia, fotografico, estadistica, incendiosSNIF, SNIF_TIPO, SNIF_CAUSA, SNIF_AREA, dms };
+  g.GEN = { reporteHTML, h24, gmsLat, gmsLon, dmsTxt, CATS, MESES, durTxt, dmy, comandancia, actividades, reporteEmergencia, fotografico, estadistica, incendiosSNIF, SNIF_TIPO, SNIF_CAUSA, SNIF_AREA, dms };
 })(typeof window !== 'undefined' ? window : globalThis);

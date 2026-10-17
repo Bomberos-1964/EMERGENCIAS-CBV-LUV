@@ -130,6 +130,18 @@ svg text.val{fill:var(--fg)}
 @media (max-width:640px){.adm-f{grid-template-columns:1fr 1fr}}
 .stepH{font-family:var(--display);font-size:1.15rem;margin:14px 0 4px;border-top:1px solid var(--line);padding-top:8px}
 .ovtop{position:sticky;top:0;z-index:50}
+.sosbar button,.sosbar .btn{background:#fff;color:#b4251b;border-color:#fff}
+.newbar{background:var(--ok-soft);color:var(--fg);border:1px solid var(--ok);border-left:8px solid var(--ok);padding:10px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:6px}
+.timeline{border-left:3px solid var(--line);margin:8px 0 0 6px;padding-left:12px}
+.tl{margin:0 0 10px;font-size:.92rem}
+.tl .tlh{margin-bottom:2px}
+.tl div{overflow-wrap:anywhere}
+.tpick{display:inline-flex;gap:6px;align-items:center}
+.tpick select{min-width:4.2rem}
+.ubic{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.m{font-family:var(--mono)}
+#p-per input{min-width:5rem}
+@media print{.ovtop,.tabs,#v-pan>.card{display:none}}
 
 .mini{display:inline-block;height:10px;background:var(--s25)}
 </style></head><body>
@@ -244,10 +256,17 @@ svg text.val{fill:var(--fg)}
 
       <div id="p-vivo" class="sec" hidden>
         <div class="card">
-          <h3>Unidades en vivo y alertas SOS</h3>
-          <p class="derived">Muestra las unidades que activaron «Compartir mi ubicación» en el teléfono. La posición se actualiza cada pocos segundos mientras el teléfono tenga la pantalla encendida y la aplicación abierta.</p>
-          <div class="dl"><button class="btn" id="siren-on">Activar alarma sonora en este computador</button><span class="derived" id="siren-msg"></span></div>
+          <h3>Alertas SOS y unidades en vivo</h3>
+          <p class="derived">La ubicación empieza sola cuando el bombero abre la aplicación y se corta cuando pulsa «Detener» (salvo que active el SOS). Si no ve a alguien, es porque cerró la aplicación, detuvo la ubicación o no tiene señal: los navegadores de los teléfonos no permiten seguir transmitiendo con la pantalla bloqueada.</p>
+          <div class="dl"><button class="btn" id="siren-on">Activar alarma sonora y avisos en este computador</button><span class="derived" id="siren-msg"></span></div>
           <div id="v-alerts"></div>
+        </div>
+        <div class="card">
+          <h3>Llamar a las unidades a una emergencia</h3>
+          <p class="derived">A cada unidad con la aplicación abierta le sale el aviso con los botones «Unidad activa» (verde) y «Omitir». Al tocar «Unidad activa» empieza a compartir su ubicación y usted ve quién confirmó.</p>
+          <div class="tools"><label style="flex:2;min-width:14rem">Aviso<textarea id="ll-msg" rows="2" placeholder="Incendio estructural en la Calle 5 con Carrera 3"></textarea></label><label>Lugar<input id="ll-lugar" placeholder="Dirección o referencia"></label><label>Coordenadas (opcional)<input id="ll-co" placeholder="4°31'50&quot;N 76°06'29&quot;W o 4.5306, -76.1082"></label><button class="btn" id="ll-send">Llamar a las unidades</button></div>
+          <div class="derived" id="ll-out" role="status"></div>
+          <div id="v-llam"></div>
         </div>
         <div id="map-vivo" class="map"></div>
         <div class="scroll"><table id="vivo-tab"></table></div>
@@ -256,7 +275,14 @@ svg text.val{fill:var(--fg)}
       <div id="p-calor" class="sec" hidden>
         <div class="card">
           <h3>Mapa de calor</h3>
-          <div class="tools"><label>Qué mostrar<select id="calor-capa"><option value="emerg">Dónde ocurren las emergencias (según los filtros de arriba)</option><option value="rec">Por dónde se han movido las unidades (recorridos)</option></select></label></div>
+          <div class="tools">
+            <label>Qué mostrar<select id="calor-capa"><option value="emerg">Dónde ocurren las emergencias</option><option value="rec">Por dónde se mueven las unidades</option></select></label>
+            <label>Periodo<select id="calor-per"><option value="filtros">Usar el periodo de arriba</option><option value="hoy">Hoy</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="anio">Este año</option><option value="todo">Todo el histórico</option><option value="rango">Rango de fechas…</option></select></label>
+            <label id="cl-d1" hidden>Desde<input type="date" id="calor-d1"></label><label id="cl-d2" hidden>Hasta<input type="date" id="calor-d2"></label>
+            <label id="cl-cat">Categoría<select id="calor-cat"></select></label>
+            <label id="cl-veh" hidden>Vehículo<select id="calor-veh"></select></label>
+            <label id="cl-pts" style="flex-direction:row;align-items:center;gap:8px;min-width:0"><input type="checkbox" id="calor-pts" checked style="width:auto"> Mostrar cada emergencia como punto</label>
+          </div>
           <p class="derived" id="calor-sum"></p>
         </div>
         <div id="map-calor" class="map"></div>
@@ -291,7 +317,7 @@ svg text.val{fill:var(--fg)}
 'use strict';
 const CFG=window.CBV_CONFIG||{};
 const E=window.CBV_ESQ;
-const VERSION_ESPERADA='2.0';
+const VERSION_ESPERADA='3.0';
 const TIPO_CAT={"CAÍDA / CORTES DE ARBOL": "OTROS", "CONTROL DE ABEJAS": "OTROS", "CONTROL DE AVISPAS": "OTROS", "CAÍDA DE CUERDAS": "OTROS", "CORTO CIRCUITO": "INCENDIOS", "COLAPSO DE ESTRUCTURAS": "OTROS", "CAPACITACIONES": "OTROS", "EXTRICACIÓN VEHICULAR": "RESCATES", "FUGA DE GAS NATURAL": "OTROS", "FUGA DE GAS GLP": "MATERIALES PELIGROSOS", "INCENDIO FORESTAL": "INCENDIOS", "INCENDIO ESTRUCTURAL": "INCENDIOS", "INCENDIO VEHICULAR": "INCENDIOS", "INUNDACIÓN": "OTROS", "LABORES DE PREVENCION O ACOMPAÑAMIENTO EN GESTION DEL RIESGO": "OTROS", "MATERIALES PELIGROSOS / DERRAMES": "MATERIALES PELIGROSOS", "PRIMEROS AUXILIOS": "OTROS", "RESCATE DE PERSONA / PARAPENTE": "RESCATES", "RESCATE DE ANIMAL": "RESCATES", "REUNIÓN EN LA ALCALDÍA": "OTROS", "REUNIONES DE SERVICIO SOCIAL": "OTROS", "SUMINISTROS DE AGUA": "OTROS", "VISITAS DE SEGURIDAD": "INSPECCIONES DE SEGURIDAD"};
 let CATS=GEN.CATS.slice();
 const TIPOS=['INCENDIOS','RESCATES','MATERIALES PELIGROSOS','INSPECCIONES DE SEGURIDAD','FALSA ALARMA','BUSQUEDA Y RESCATE','OTROS'];
@@ -305,6 +331,26 @@ const pad=(n,l)=>String(n).padStart(l,'0');
 const isoDate=d=>d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2);
 const tmin=t=>/^\d\d:\d\d$/.test(t||'')?+t.slice(0,2)*60+ +t.slice(3):null;
 const lapse=(a,b)=>{const x=tmin(a),y=tmin(b);if(x==null||y==null)return null;let d=y-x;if(d<0)d+=1440;return d};
+/* ---------- coordenadas en grados, minutos y segundos (todo el sistema) ---------- */
+function dmsParts(v){const a=Math.abs(+v);let d=Math.floor(a),m=Math.floor((a-d)*60),s=Math.round(((a-d)*60-m)*600)/10;if(s>=60){s=0;m++}if(m>=60){m=0;d++}return{d,m,s}}
+const dmsStr=(v,pos,neg)=>{const p=dmsParts(v);return p.d+'°'+pad(p.m,2)+"'"+(p.s<10?'0':'')+p.s.toFixed(1)+'"'+(+v<0?neg:pos)};
+const okNum=v=>v!==''&&v!=null&&isFinite(parseFloat(v));
+const gms=(lat,lon)=>okNum(lat)&&okNum(lon)?dmsStr(parseFloat(lat),'N','S')+' '+dmsStr(parseFloat(lon),'E','W'):'';
+const mapsUrl=(lat,lon)=>'https://www.google.com/maps?q='+encodeURIComponent(lat+','+lon);
+const dirUrl=(lat,lon)=>'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(lat+','+lon)+'&travelmode=driving';
+function parseCoord(txt){
+  const t=String(txt||'');
+  const re=/(-?\d+(?:[.,]\d+)?)\s*(?:°|º|d|\s)\s*(?:(\d+(?:[.,]\d+)?)\s*(?:'|′|m|\s)\s*)?(?:(\d+(?:[.,]\d+)?)\s*(?:"|″|''|s)?\s*)?([NSEWO])\b/gi;
+  const got=[];let m;
+  while((m=re.exec(t))){const n=x=>x==null?0:parseFloat(String(x).replace(',','.'));let v=Math.abs(n(m[1]))+n(m[2])/60+n(m[3])/3600;const h=m[4].toUpperCase();if(h==='S'||h==='W'||h==='O'||String(m[1]).startsWith('-'))v=-v;got.push({h,v})}
+  const la=got.find(g=>g.h==='N'||g.h==='S'),lo=got.find(g=>g.h==='E'||g.h==='W'||g.h==='O');
+  if(la&&lo&&Math.abs(la.v)<=90&&Math.abs(lo.v)<=180)return{lat:la.v.toFixed(6),lon:lo.v.toFixed(6)};
+  const d=t.match(/(-?\d+[.,]\d+)\s*[,;\s]\s*(-?\d+[.,]\d+)/);
+  if(d){const a=parseFloat(d[1].replace(',','.')),b=parseFloat(d[2].replace(',','.'));if(Math.abs(a)<=90&&Math.abs(b)<=180)return{lat:a.toFixed(6),lon:b.toFixed(6)}}
+  return null;
+}
+const h24=v=>GEN.h24(v);
+const hmTxt=t=>{if(!/^\d\d:\d\d$/.test(t||''))return t||'';let h=+t.slice(0,2);const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+t.slice(3)+' '+ap};
 function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 const clone=o=>o==null?o:JSON.parse(JSON.stringify(o));
@@ -395,7 +441,7 @@ async function initPanel(){
   $('q').oninput=()=>{page=0;renderRecs()};$('prev').onclick=()=>{page=Math.max(0,page-1);renderRecs()};$('next').onclick=()=>{page++;renderRecs()};
   $('gen').onclick=()=>informe($('gen'));$('gen-snif').onclick=()=>snifSolo($('gen-snif'));
   $('refresh').onclick=async()=>{$('opmsg').textContent='Actualizando…';try{await loadAll();renderPanel();$('opmsg').textContent='Datos al día ('+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+').'}catch(e){$('opmsg').textContent='No se pudo actualizar: '+humanErr(e)}};
-  $('backup').onclick=backup;$('padd').onclick=addPers;$('showanul').onchange=()=>{page=0;renderRecs()};
+  $('backup').onclick=backup;$('showanul').onchange=()=>{page=0;renderRecs()};
   $('fsum').textContent='Cargando datos…';
   try{await loadAll()}catch(e){$('fsum').textContent='No se pudieron cargar los datos ('+humanErr(e)+'). Revise la conexión y pulse «Actualizar datos».'}
   refreshSelectors(true);
@@ -421,7 +467,7 @@ function refreshSelectors(first){
 }
 const toRow=o=>{
   const rpt=o.rpt||null,L=rpt&&rpt.les?rpt.les.filter(x=>x.n).length:0,tr=rpt&&rpt.les?((rpt.les.find(x=>x.t)||{}).t||null):null;
-  return {src:'app',id:o.num,tmp:o.tmp,cat:o.cat,tipo:o.tipo,fecha:o.fecha,hora:o.hora||'',hsal:o.hsal||null,hlle:o.hlle||null,hfin:o.hfin||null,durmin:o.durmin,dir:o.dir,bar:o.bar,desc:o.desc,
+  return {src:'app',id:o.num,tmp:o.tmp,cat:o.cat,tipo:o.tipo,fecha:o.fecha,hora:h24(o.hora)||'',hsal:h24(o.hsal)||null,hlle:h24(o.hlle)||null,hfin:h24(o.hfin)||null,durmin:o.durmin,dir:o.dir,bar:o.bar,desc:o.desc,
     area:o.area||null,veg:o.veg||null,uni:o.uni,veh:o.veh,lat:o.lat||null,lon:o.lon||null,canal:o.canal||null,rep:o.rep||null,pers:o.pers||[],nfotos:o.nfotos||0,
     borrador:o.estado!=='final',_nombre:o.por,rpt,les:L,lesionados:L||null,tras:tr,trasladado:tr,form:o.form,carpeta:o.carpeta,creado:o.creado,zona:o.zona,
     inc:o.inc||null,na:o.na||null,extra:o.extra||null,completo:!!o.completo,doc:o.doc||'',anulado:!!o.anulado,usuario:o.usuario||'',estado:o.estado,extraTxt:extraTxtDe(o)};
@@ -447,9 +493,10 @@ async function loadAll(){
   }
   const l=need(await call('lista',{desde:LAST}));
   l.regs.forEach(o=>{REGS.set(o.tmp,o);LAST=Math.max(LAST,o.actualizado||0)});
-  try{const p=need(await call('personalGet'));ROSTER=(p.personal||[]).map(x=>({nombre:String(x.nombre),grado:x.grado||'',cargo:x.cargo||'',activo:String(x.activo).toLowerCase()!=='no'}))}catch(e){}
+  if(Array.isArray(l.tmps)){const vivos=new Set(l.tmps);[...REGS.keys()].forEach(k=>{if(!vivos.has(k))REGS.delete(k)})}   /* eliminados: salen de la estadística */
+  try{const p=need(await call('personalGet'));ROSTER=(p.personal||[]).map(x=>({...x,nombre:String(x.nombre),cedula:String(x.cedula||''),activo:String(x.activo).toLowerCase()!=='no',operativo:String(x.operativo).toLowerCase()!=='no'}))}catch(e){}
   const rows=HISTROWS.slice();
-  REGS.forEach(o=>{if(o.cat&&o.fecha&&!o.anulado)rows.push(toRow(o))});
+  REGS.forEach(o=>{if(o.cat&&o.fecha&&!o.anulado&&o.estado==='final')rows.push(toRow(o))});
   rows.sort((a,b)=>(a.fecha+(a.hora||'')).localeCompare(b.fecha+(b.hora||'')));
   ALL=rows;
   $('histbanner').hidden=HISTOK;
@@ -523,10 +570,10 @@ function drawMonths(){
 }
 
 function renderRecs(){
-  const q=$('q').value.trim().toLowerCase(),base=CUR.concat($('showanul')&&$('showanul').checked?[...REGS.values()].filter(o=>o.anulado&&o.cat).map(toRow):[]),rows=base.filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc].join(' ').toLowerCase().includes(q)).slice().reverse();
+  const q=$('q').value.trim().toLowerCase(),base=CUR.concat([...REGS.values()].filter(o=>o.cat&&o.fecha&&!o.anulado&&o.estado!=='final').map(toRow),$('showanul')&&$('showanul').checked?[...REGS.values()].filter(o=>o.anulado&&o.cat).map(toRow):[]),rows=base.filter(r=>!q||[r.id,r.cat,r.dir,r.bar,r.desc].join(' ').toLowerCase().includes(q)).slice().reverse();
   const PS=40,pages=Math.max(1,Math.ceil(rows.length/PS));if(page>=pages)page=pages-1;
   const sl=rows.slice(page*PS,page*PS+PS);
-  $('rtab').innerHTML='<tr><th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th></tr>'+(sl.length?sl.map(r=>'<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado?' style="text-decoration:line-through;opacity:.6"':'')+'><td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.src==='app'?'App '+estadoPill(r):'Excel')+'</td></tr>').join(''):'<tr><td colspan="7">Sin registros con estos filtros.</td></tr>');
+  $('rtab').innerHTML='<tr><th>N°</th><th>Día</th><th>Categoría</th><th>Lugar</th><th class="n">Unid.</th><th>Vehículo</th><th>Origen</th></tr>'+(sl.length?sl.map(r=>'<tr class="click" data-i="'+rows.indexOf(r)+'"'+(r.anulado?' style="text-decoration:line-through;opacity:.6"':'')+'><td class="m">'+esc(r.id)+'</td><td>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'</td><td>'+esc(tc(r.cat))+'</td><td>'+esc(r.dir||'—')+'</td><td class="n">'+(r.uni==null?'—':r.uni)+'</td><td>'+esc(r.veh||'—')+'</td><td>'+(r.src==='app'?'App '+estadoPill(r):'Excel')+'</td></tr>').join(''):'<tr><td colspan="7">Sin registros con estos filtros.</td></tr>');
   $('pg').textContent='Página '+(page+1)+' de '+pages+' · '+nf.format(rows.length)+' registros';
   $('prev').disabled=page===0;$('next').disabled=page>=pages-1;
   $('rtab').querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>showDetail(rows[+tr.dataset.i]));
@@ -634,38 +681,6 @@ async function informe(btn){
   btn.disabled=false;
 }
 
-/* ----- Personal ----- */
-function renderPers(){
-  const part={};CUR.forEach(r=>(r.pers||[]).forEach(n=>{const o=part[n]=part[n]||{n:0,m:0};o.n++;o.m+=r.durmin||0}));
-  const rs=ROSTER.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
-  $('ptab').innerHTML=rs.length?'<tr><th>Nombre</th><th class="n">Participaciones</th><th class="n">Horas</th><th>En el formulario</th><th></th></tr>'+rs.map((p,i)=>{const o=part[p.nombre]||{n:0,m:0};return '<tr><td>'+esc(p.nombre)+'</td><td class="n">'+o.n+'</td><td class="n">'+(o.m/60).toLocaleString('es-CO',{maximumFractionDigits:1})+'</td><td>'+(p.activo?'<span class="pill on">activo</span>':'<span class="pill off">oculto</span>')+'</td><td><button class="btn alt sm" data-tg="'+i+'">'+(p.activo?'Ocultar':'Mostrar')+'</button> <button class="btn alt sm" data-del="'+i+'">Quitar</button></td></tr>'}).join(''):'<tr><td>Aún no hay personal en la lista. Agregue los nombres arriba.</td></tr>';
-  const sorted=rs;
-  $('ptab').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{const p=sorted[+b.dataset.del];if(!confirm('¿Quitar a '+p.nombre+' de la lista?'))return;await guardarPers(ROSTER.filter(x=>x!==p),'Quitado.')});
-  $('ptab').querySelectorAll('[data-tg]').forEach(b=>b.onclick=async()=>{const p=sorted[+b.dataset.tg];await guardarPers(ROSTER.map(x=>x===p?{...x,activo:!x.activo}:x),'Listo.')});
-}
-async function guardarPers(lista,okm){
-  try{need(await call('personalSet',{personal:lista.map(p=>({nombre:p.nombre,grado:p.grado||'',cargo:p.cargo||'',activo:p.activo!==false})),por:YO}));ROSTER=lista;$('pmsg').textContent=okm;renderPers()}
-  catch(e){$('pmsg').textContent='No se pudo guardar: '+e.message}
-}
-async function addPers(){
-  const n=$('pnom').value.trim();if(!n)return;
-  if(ROSTER.some(p=>p.nombre.toLowerCase()===n.toLowerCase())){$('pmsg').textContent='Ya está en la lista.';return}
-  await guardarPers(ROSTER.concat([{nombre:n,grado:'',cargo:'',activo:true}]),'Agregado. Aparecerá en los teléfonos la próxima vez que tengan internet.');$('pnom').value='';
-}
-
-/* ----- Auditoría y copia de seguridad ----- */
-const jsn=s=>{try{return JSON.parse(s)}catch(e){return null}};
-async function renderAud(){
-  $('atab').innerHTML='<tr><td>Cargando…</td></tr>';
-  try{
-    const rs=need(await call('aud',{n:400})).aud;
-    $('atab').innerHTML=rs.length?'<tr><th>Cuándo</th><th>Registro</th><th>Quién</th><th>Acción</th><th>Detalle</th></tr>'+rs.map(a=>{
-      const d=jsn(a.detalle)||{};let det='';
-      if(a.accion==='editar'&&d.antes)det=(d.motivo?'<b>Motivo:</b> '+esc(d.motivo)+'<br>':'')+Object.keys(d.antes).map(k=>esc(k)+': «'+esc(d.antes[k]??'—')+'» → «'+esc((d.despues||{})[k]??'—')+'»').join('<br>');
-      else if(a.detalle)det=esc(String(a.detalle).slice(0,200));
-      return '<tr><td>'+new Date(Number(a.cuando)).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})+'</td><td class="m">'+esc(a.registro||'')+'</td><td>'+esc(a.quien||'')+'</td><td>'+esc(a.accion)+'</td><td>'+det+'</td></tr>'}).join(''):'<tr><td>Todavía no hay movimientos.</td></tr>';
-  }catch(e){$('atab').innerHTML='<tr><td>No se pudo leer la auditoría: '+esc(e.message)+'</td></tr>'}
-}
 async function backup(){
   const m=$('opmsg');m.textContent='Reuniendo todo…';
   try{
@@ -700,39 +715,100 @@ function renderSeries(){
     $('sfor').innerHTML=sv+'</svg>'}
 }
 
-/* ================= ALARMA, ALERTAS SOS Y UNIDADES EN VIVO ================= */
+/* ================= ALARMA, SOS, LLAMADOS, AVISO DE REPORTES NUEVOS Y UNIDADES EN VIVO ================= */
 const siren={ctx:null,osc:null,iv:null,
   unlock(){try{if(!this.ctx)this.ctx=new (window.AudioContext||window.webkitAudioContext)();if(this.ctx.state==='suspended')this.ctx.resume();const e=$('siren-msg');if(e)e.textContent=this.ctx.state==='running'?'Alarma sonora lista.':''}catch(x){}},
-  beep(){this.unlock();try{const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.connect(g);g.connect(this.ctx.destination);g.gain.value=.3;o.frequency.value=880;o.start();setTimeout(()=>o.stop(),400)}catch(x){}},
+  beep(n){this.unlock();n=n||2;try{for(let i=0;i<n;i++){const t0=this.ctx.currentTime+i*.45,o=this.ctx.createOscillator(),g=this.ctx.createGain();o.connect(g);g.connect(this.ctx.destination);g.gain.value=.3;o.frequency.value=i%2?660:880;o.start(t0);o.stop(t0+.3)}}catch(x){}},
   start(){this.unlock();if(!this.ctx||this.osc)return;try{const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='square';g.gain.value=.5;o.connect(g);g.connect(this.ctx.destination);o.start();this.osc=o;let hi=false;o.frequency.value=620;this.iv=setInterval(()=>{hi=!hi;o.frequency.value=hi?950:620},450)}catch(x){}},
   stop(){try{if(this.osc)this.osc.stop()}catch(x){}this.osc=null;clearInterval(this.iv)}};
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>siren.unlock(),{passive:true}));
-let VIVO={pos:[],alertas:[]},MV=null,MVL=null,MUTED=new Set();
-function iniciarAlertas(){
-  $('siren-on').onclick=()=>{siren.beep()};
-  pollVivo();setInterval(pollVivo,10000);
+let VIVO={pos:[],alertas:[],nuevos:[]},MV=null,MVL=null,MUTED=new Set(),NSEEN=new Set(lsGet('cbv_nseen',[])),FIRSTPOLL=true,NOTICES=[];
+
+async function copiar(t,btn){
+  try{await navigator.clipboard.writeText(t)}catch(e){const i=document.createElement('textarea');i.value=t;document.body.append(i);i.select();try{document.execCommand('copy')}catch(x){}i.remove()}
+  if(btn){const o=btn.textContent;btn.textContent='¡Copiado!';setTimeout(()=>btn.textContent=o,1600)}
 }
+/* botones de ubicación: copiar coordenadas, compartir y abrir en Google Maps */
+function ubicActs(lat,lon,quien){
+  const w=document.createElement('span');w.className='ubic';
+  if(!okNum(lat)||!okNum(lon)){w.textContent='sin ubicación GPS';return w}
+  const link=mapsUrl(lat,lon),texto=(quien?quien+' · ':'')+'Ubicación: '+gms(lat,lon)+' '+link;
+  const mp=document.createElement('a');mp.className='btn alt sm';mp.href=link;mp.target='_blank';mp.rel='noopener';mp.textContent='Abrir en Google Maps';
+  const cp=document.createElement('button');cp.type='button';cp.className='btn alt sm';cp.textContent='Copiar coordenadas';cp.onclick=()=>copiar(gms(lat,lon),cp);
+  const sh=document.createElement('button');sh.type='button';sh.className='btn alt sm';sh.textContent='Compartir ubicación';
+  sh.onclick=async()=>{if(navigator.share){try{await navigator.share({title:'Ubicación',text:texto,url:link});return}catch(e){if(e&&e.name==='AbortError')return}}window.open('https://wa.me/?text='+encodeURIComponent(texto),'_blank','noopener')};
+  w.append(mp,' ',cp,' ',sh);return w;
+}
+function iniciarAlertas(){
+  $('siren-on').onclick=()=>{siren.beep(3);try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}};
+  bindLlamado();pollVivo();setInterval(pollVivo,10000);
+}
+function avisoNavegador(t,b,tag){try{if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState!=='visible')new Notification(t,{body:b,tag,requireInteraction:true})}catch(e){}}
 async function pollVivo(){
   if(!USER)return;
-  try{const r=await call('vivo');if(r&&r.ok){VIVO=r;drawAlertas();if(!$('p-vivo').hidden)drawVivo()}}catch(e){}
+  try{const r=await call('vivo');if(r&&r.ok){VIVO=r;drawAlertas();checkNuevos(r.nuevos);if(!$('p-vivo').hidden)drawVivo()}}catch(e){}
+}
+const sosList=()=>(VIVO.alertas||[]).filter(a=>a.tipo!=='llamado');
+const llamList=()=>(VIVO.alertas||[]).filter(a=>a.tipo==='llamado');
+async function atender(a){
+  const nota=prompt('Marcar como ATENDIDO al bombero caído ('+a.por+').\nEscriba una nota (opcional): quién llegó, estado del bombero, etc.');
+  if(nota===null)return;
+  try{need(await call('alertAck',{id:a.id,nota:nota.trim()}));siren.stop();MUTED.delete(a.id);pollVivo()}catch(e){alert('No se pudo marcar: '+humanErr(e))}
 }
 function drawAlertas(){
   let box=$('sosglobal');
   if(!box){box=document.createElement('div');box.id='sosglobal';box.className='ovtop';document.querySelector('.wrap').prepend(box)}
-  const act=VIVO.alertas||[];
-  box.innerHTML='';
+  const act=sosList();box.innerHTML='';
   act.forEach(a=>{
+    const ub=okNum(a.lat)&&okNum(a.lon);
     const d=document.createElement('div');d.className='sosbar';
-    const ub=a.lat!==''&&a.lat!=null;
-    d.innerHTML='<span>🚨 ALERTA SOS · <b>'+esc(a.por)+'</b>'+(a.veh?' · '+esc(a.veh):'')+' · '+new Date(a.cuando).toLocaleTimeString('es-CO')+(ub?' · <a href="https://www.google.com/maps?q='+a.lat+','+a.lon+'" target="_blank" rel="noopener">abrir en Google Maps</a>':' · sin GPS')+'</span>';
-    const b=document.createElement('span');
-    const ver=document.createElement('button');ver.className='btn alt sm';ver.textContent='Ver en el mapa';ver.onclick=()=>{showTab('vivo');setTimeout(()=>{if(MV&&ub)MV.setView([a.lat,a.lon],16)},300)};
-    const ok=document.createElement('button');ok.className='btn alt sm';ok.textContent='Marcar atendida';ok.onclick=async()=>{try{need(await call('alertAck',{id:a.id}));pollVivo()}catch(e){alert('No se pudo marcar: '+humanErr(e))}};
-    b.append(ver,' ',ok);d.append(b);box.append(d);
+    const t=document.createElement('div');
+    t.innerHTML='<b>🚨 SOS · BOMBERO CAÍDO · '+esc(a.por)+'</b>'+(a.veh?' · Unidad '+esc(a.veh):'')+' · activado '+new Date(a.cuando).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' h'+(ub?'<br><span class="m">'+esc(gms(a.lat,a.lon))+'</span>':'<br>sin ubicación GPS todavía')+(a.msg?'<br>'+esc(a.msg):'');
+    const b=document.createElement('div');b.className='dl';
+    b.append(ubicActs(a.lat,a.lon,'SOS '+a.por));
+    const ver=document.createElement('button');ver.className='btn alt sm';ver.textContent='Ver en el mapa';ver.onclick=()=>{showTab('vivo');setTimeout(()=>{if(MV&&ub)MV.setView([a.lat,a.lon],17)},300)};
+    const si=document.createElement('button');si.className='btn alt sm';si.textContent=MUTED.has(a.id)?'Sonido apagado':'Silenciar sonido';si.onclick=()=>{MUTED.add(a.id);drawAlertas()};
+    const ok=document.createElement('button');ok.className='btn sm';ok.textContent='Ya se atendió';ok.onclick=()=>atender(a);
+    b.append(ver,si,ok);d.append(t,b);box.append(d);
   });
-  if(act.length)siren.start();else siren.stop();
-  const va=$('v-alerts');if(va)va.innerHTML=act.length?'':'<p class="derived">Sin alertas activas.</p>';
+  const sonar=act.filter(a=>!MUTED.has(a.id)).length>0;
+  if(sonar){siren.start();act.filter(a=>!NSOS.has(a.id)).forEach(a=>{NSOS.add(a.id);avisoNavegador('🚨 SOS · BOMBERO CAÍDO',a.por,'sos'+a.id)})}else siren.stop();
+  const va=$('v-alerts');if(va)va.innerHTML=act.length?'':'<p class="derived">Sin alertas SOS activas.</p>';
 }
+const NSOS=new Set();
+/* ----- aviso de reporte nuevo recibido ----- */
+function checkNuevos(list){
+  const nu=(list||[]).filter(x=>x.tipo==='nuevo'),ahora=Date.now(),fresh=[];
+  nu.forEach(x=>{if(NSEEN.has(x.id))return;NSEEN.add(x.id);if(FIRSTPOLL&&ahora-x.cuando>15*60000)return;fresh.push(x)});
+  lsSet('cbv_nseen',[...NSEEN].slice(-80));FIRSTPOLL=false;
+  if(!fresh.length)return;
+  siren.beep(2);
+  fresh.forEach(x=>{NOTICES.push(x);avisoNavegador('📋 Nuevo reporte recibido',(x.num||'')+' · '+(x.cat||''),'n'+x.id)});
+  drawNotices();
+  loadAll().then(()=>{renderPanel()}).catch(()=>{});
+}
+function drawNotices(){
+  let box=$('noticias');
+  if(!box){box=document.createElement('div');box.id='noticias';box.className='ovtop';const w=document.querySelector('.wrap');const s=$('sosglobal');s?s.after(box):w.prepend(box)}
+  box.innerHTML='';
+  NOTICES.forEach((x,i)=>{
+    const d=document.createElement('div');d.className='newbar';
+    const t=document.createElement('div');t.innerHTML='<b>📋 Nuevo reporte recibido · '+esc(x.num||'')+'</b> · '+esc(tc(x.cat||''))+' · registró '+esc(x.por||'—')+' · '+new Date(x.cuando).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',hour12:false})+' h';
+    const b=document.createElement('div');b.className='dl';
+    const pr=document.createElement('button');pr.className='btn sm';pr.textContent='Imprimir reporte';pr.onclick=async()=>{pr.disabled=true;await imprimirPorTmp(x.tmp);pr.disabled=false};
+    const ver=document.createElement('button');ver.className='btn alt sm';ver.textContent='Ver';ver.onclick=async()=>{await loadAll();renderPanel();showTab('reg');const o=REGS.get(x.tmp);if(o)showDetail(toRow(o))};
+    const ce=document.createElement('button');ce.className='btn alt sm';ce.textContent='Cerrar';ce.onclick=()=>{NOTICES.splice(i,1);drawNotices()};
+    b.append(pr,ver,ce);d.append(t,b);box.append(d);
+  });
+}
+async function imprimirPorTmp(tmp){
+  let o=REGS.get(tmp);
+  if(!o){try{await loadAll();o=REGS.get(tmp)}catch(e){}}
+  if(!o){alert('El reporte todavía no está disponible. Pulse «Actualizar datos» e inténtelo de nuevo.');return}
+  await imprimirReporte(toRow(o));
+}
+
+/* ----- pestaña En vivo ----- */
 function enVivoTab(on){if(on){initMapVivo();drawVivo();pollVivo()}}
 function initMapVivo(){
   if(MV||typeof L==='undefined'){if(typeof L==='undefined')$('map-vivo').innerHTML='<p class="derived" style="padding:12px">No se pudo cargar la librería del mapa.</p>';return}
@@ -743,53 +819,187 @@ function initMapVivo(){
 }
 function drawVivo(){
   const ps=(VIVO.pos||[]).slice().sort((a,b)=>b.t-a.t),ahora=VIVO.ahora||Date.now();
-  const sosPor=new Set((VIVO.alertas||[]).map(a=>a.por));
+  const sosPor=new Set(sosList().map(a=>a.por));
   if(MV&&MVL){MVL.clearLayers();const pts=[];
     ps.forEach(p=>{const viejo=ahora-p.t>10*60000;
-      const ic=L.divIcon({className:'',html:'<div class="unit'+(viejo?' old':'')+(sosPor.has(p.por)?' sos':'')+'"></div>',iconSize:[14,14],iconAnchor:[7,7]});
-      L.marker([p.lat,p.lon],{icon:ic}).bindTooltip('<b>'+esc(p.por)+'</b>'+(p.veh?' · '+esc(p.veh):'')+'<br>'+(p.v||0)+' km/h · hace '+Math.max(0,Math.round((ahora-p.t)/1000))+' s',{permanent:!viejo,direction:'top',offset:[0,-8]}).addTo(MVL);
+      const ic=L.divIcon({className:'',html:'<div class="unit'+(viejo?' old':'')+(sosPor.has(p.por)||p.sos?' sos':'')+'"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+      L.marker([p.lat,p.lon],{icon:ic}).bindTooltip('<b>'+esc(p.por)+'</b>'+(p.veh?' · '+esc(p.veh):'')+'<br>'+(p.v||0)+' km/h · hace '+Math.max(0,Math.round((ahora-p.t)/1000))+' s<br>'+esc(gms(p.lat,p.lon)),{permanent:!viejo,direction:'top',offset:[0,-8]}).addTo(MVL);
       L.circle([p.lat,p.lon],{radius:Math.max(p.acc||0,5),color:viejo?'#999':'#2b7fb8',weight:1,fillOpacity:.08}).addTo(MVL);pts.push([p.lat,p.lon])});
-    (VIVO.alertas||[]).forEach(a=>{if(a.lat!==''&&a.lat!=null){L.circleMarker([a.lat,a.lon],{radius:14,color:'#d62a1c',weight:3,fillOpacity:.25}).bindTooltip('SOS · '+esc(a.por)).addTo(MVL);pts.push([a.lat,a.lon])}});
+    sosList().forEach(a=>{if(okNum(a.lat)){L.circleMarker([a.lat,a.lon],{radius:14,color:'#d62a1c',weight:3,fillOpacity:.25}).bindTooltip('SOS · '+esc(a.por)).addTo(MVL);pts.push([a.lat,a.lon])}});
+    llamList().forEach(a=>{if(okNum(a.lat)){L.circleMarker([a.lat,a.lon],{radius:12,color:'#1f9d55',weight:3,fillOpacity:.2}).bindTooltip('Llamado · '+esc(a.msg)).addTo(MVL);pts.push([a.lat,a.lon])}});
     if(pts.length&&!MV._fitDone){MV.fitBounds(pts,{maxZoom:15,padding:[30,30]});MV._fitDone=true}}
-  $('vivo-tab').innerHTML=ps.length?'<tr><th>Unidad / bombero</th><th>Vehículo</th><th>Emergencia</th><th class="n">Velocidad</th><th class="n">Precisión</th><th>Última señal</th></tr>'+ps.map(p=>'<tr><td>'+esc(p.por)+'</td><td>'+esc(p.veh||'—')+'</td><td class="m">'+esc(p.num||'—')+'</td><td class="n">'+(p.v||0)+' km/h</td><td class="n">±'+(p.acc||'?')+' m</td><td>hace '+Math.max(0,Math.round((ahora-p.t)/1000))+' s'+(ahora-p.t>10*60000?' <span class="pill off">sin señal</span>':' <span class="pill on">en línea</span>')+'</td></tr>').join(''):'<tr><td>Ninguna unidad está compartiendo su ubicación ahora. Los bomberos la activan con el botón «Activar» en la aplicación del celular.</td></tr>';
+  const t=$('vivo-tab');t.innerHTML='';
+  if(!ps.length){t.innerHTML='<tr><td>Ninguna unidad está compartiendo su ubicación ahora. La ubicación empieza sola cuando el bombero abre la aplicación y se corta si pulsa «Detener».</td></tr>';}
+  else{
+    t.innerHTML='<tr><th>Unidad / bombero</th><th>Vehículo</th><th>Emergencia</th><th>Ubicación (grados, minutos y segundos)</th><th class="n">Velocidad</th><th>Última señal</th><th>Acciones</th></tr>';
+    ps.forEach(p=>{const tr=document.createElement('tr');
+      tr.innerHTML='<td>'+esc(p.por)+(sosPor.has(p.por)||p.sos?' <span class="pill bad">SOS</span>':'')+'</td><td>'+esc(p.veh||'—')+'</td><td class="m">'+esc(p.num||'—')+'</td><td class="m">'+esc(gms(p.lat,p.lon))+'<br><span class="derived">±'+(p.acc||'?')+' m</span></td><td class="n">'+(p.v||0)+' km/h</td><td>hace '+Math.max(0,Math.round((ahora-p.t)/1000))+' s'+(ahora-p.t>10*60000?' <span class="pill off">sin señal</span>':' <span class="pill on">en línea</span>')+'</td>';
+      const td=document.createElement('td');td.append(ubicActs(p.lat,p.lon,p.por));
+      const z=document.createElement('button');z.className='btn alt sm';z.textContent='Centrar';z.onclick=()=>{if(MV)MV.setView([p.lat,p.lon],17)};td.append(' ',z);tr.append(td);t.append(tr)});
+  }
+  drawLlamados();
+}
+/* ----- llamado de la central a las unidades ----- */
+function drawLlamados(){
+  const box=$('v-llam');if(!box)return;
+  const l=llamList();box.innerHTML='';
+  if(!l.length){box.innerHTML='<p class="derived">No hay llamados activos.</p>';return}
+  l.forEach(a=>{
+    const d=document.createElement('div');d.className='rec';
+    const cf=(a.conf||[]);
+    d.innerHTML='<b>'+esc(a.msg)+'</b><span class="derived">'+(a.lugar?'Lugar: '+esc(a.lugar)+' · ':'')+(okNum(a.lat)?esc(gms(a.lat,a.lon))+' · ':'')+'enviado '+new Date(a.cuando).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',hour12:false})+' h por '+esc(a.por)+'</span>'+
+      '<span><b>'+cf.length+'</b> unidad(es) confirmaron: '+(cf.length?cf.map(c=>esc(c.por)+(c.veh?' ('+esc(c.veh)+')':'')+' '+new Date(c.t).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',hour12:false})).join(' · '):'ninguna todavía')+'</span>';
+    const b=document.createElement('div');b.className='dl';
+    const c=document.createElement('button');c.className='btn alt sm';c.textContent='Cerrar llamado';c.onclick=async()=>{try{need(await call('alertAck',{id:a.id,nota:'Llamado cerrado'}));pollVivo()}catch(e){alert(humanErr(e))}};
+    b.append(c);if(okNum(a.lat))b.append(ubicActs(a.lat,a.lon,'Llamado'));d.append(b);box.append(d);
+  });
+}
+function bindLlamado(){
+  const b=$('ll-send');if(!b||b._b)return;b._b=1;
+  b.onclick=async()=>{
+    const m=$('ll-msg').value.trim(),lug=$('ll-lugar').value.trim(),co=$('ll-co').value.trim(),o=$('ll-out');
+    if(!m){o.textContent='Escriba el aviso para las unidades.';return}
+    let lat='',lon='';if(co){const p=parseCoord(co);if(!p){o.textContent='No entendí las coordenadas. Escríbalas en grados, minutos y segundos (4°31\'50"N 76°06\'29"W) o en decimales (4.5306, -76.1082).';return}lat=+p.lat;lon=+p.lon}
+    b.disabled=true;o.textContent='Enviando…';
+    try{need(await call('llamado',{msg:m,lugar:lug,lat,lon}));o.textContent='Llamado enviado. Las unidades con la aplicación abierta lo reciben en segundos y verán «Unidad activa / Omitir».';$('ll-msg').value='';$('ll-lugar').value='';$('ll-co').value='';pollVivo()}
+    catch(e){o.textContent='No se pudo enviar: '+humanErr(e)}
+    b.disabled=false;
+  };
 }
 
 /* ================= MAPA DE CALOR ================= */
-let MC=null,HEAT=null;
+let MC=null,HEAT=null,CPTS=null;
 function initCalor(){
   if(typeof L==='undefined'){$('map-calor').innerHTML='<p class="derived" style="padding:12px">No se pudo cargar la librería del mapa.</p>';return}
-  if(!MC){MC=L.map('map-calor').setView([4.5333,-76.0999],12);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MC);new ResizeObserver(()=>MC.invalidateSize()).observe($('map-calor'));$('calor-capa').onchange=drawCalor}
-  drawCalor();
+  if(!MC){
+    MC=L.map('map-calor').setView([4.5333,-76.0999],12);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MC);
+    new ResizeObserver(()=>MC.invalidateSize()).observe($('map-calor'));CPTS=L.layerGroup().addTo(MC);
+    $('calor-cat').innerHTML='<option value="">Todas las categorías</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('');
+    $('calor-veh').innerHTML='<option value="">Todos los vehículos</option>'+vehOpts().map(c=>'<option>'+esc(c)+'</option>').join('');
+    $('calor-d1').value=isoDate(new Date(Date.now()-30*86400000));$('calor-d2').value=isoDate(new Date());
+    ['calor-capa','calor-per','calor-d1','calor-d2','calor-cat','calor-veh','calor-pts'].forEach(id=>$(id).onchange=()=>{calorUI();drawCalor()});
+  }
+  calorUI();drawCalor();
+}
+const vehOpts=()=>(CFGP.veh&&CFGP.veh.length?CFGP.veh:E.VEH);
+function calorUI(){
+  const rec=$('calor-capa').value==='rec',per=$('calor-per').value;
+  $('cl-d1').hidden=$('cl-d2').hidden=per!=='rango';$('cl-cat').hidden=rec;$('cl-veh').hidden=!rec;$('cl-pts').hidden=rec;
+}
+function calorRango(){
+  const per=$('calor-per').value,hoy=isoDate(new Date()),ms=d=>new Date(d+'T00:00:00').getTime();
+  if(per==='filtros'){const p=period();return {from:p.from,to:p.to,label:p.label+' (filtros de arriba)'}}
+  if(per==='hoy')return {from:hoy,to:hoy,label:'hoy'};
+  if(per==='7')return {from:isoDate(new Date(Date.now()-6*86400000)),to:hoy,label:'últimos 7 días'};
+  if(per==='30')return {from:isoDate(new Date(Date.now()-29*86400000)),to:hoy,label:'últimos 30 días'};
+  if(per==='90')return {from:isoDate(new Date(Date.now()-89*86400000)),to:hoy,label:'últimos 90 días'};
+  if(per==='anio')return {from:hoy.slice(0,4)+'-01-01',to:hoy,label:'este año'};
+  if(per==='todo')return {from:'0000-01-01',to:'9999-12-31',label:'todo el histórico'};
+  const a=$('calor-d1').value||'0000-01-01',b=$('calor-d2').value||'9999-12-31';return {from:a,to:b,label:GEN.dmy(a)+' al '+GEN.dmy(b)};
 }
 const coordDe=r=>{
   let la=parseFloat(String(r.lat||'').replace(',','.')),lo=parseFloat(String(r.lon||'').replace(',','.'));
-  if((isNaN(la)||isNaN(lo))&&r.coord){const m=String(r.coord).match(/(-?\d+[.,]\d+)\s*[,;\s]\s*(-?\d+[.,]\d+)/);if(m){la=parseFloat(m[1].replace(',','.'));lo=parseFloat(m[2].replace(',','.'))}}
-  return (isNaN(la)||isNaN(lo)||Math.abs(la)>90||Math.abs(lo)>180)?null:[la,lo];
+  if((isNaN(la)||isNaN(lo))&&r.coord){const p=parseCoord(r.coord);if(p){la=+p.lat;lo=+p.lon}}
+  return (isNaN(la)||isNaN(lo)||Math.abs(la)>90||Math.abs(lo)>180||(la===0&&lo===0))?null:[la,lo];
 };
+let calorTok=0;
 async function drawCalor(){
   if(!MC)return;
-  const capa=$('calor-capa').value,per=period();let pts=[];
-  const s=$('calor-sum');
+  const tok=++calorTok,capa=$('calor-capa').value,rg=calorRango(),s=$('calor-sum');let pts=[];CPTS.clearLayers();
   try{
-    if(capa==='emerg'){CUR.forEach(r=>{const c=coordDe(r);if(c)pts.push([c[0],c[1],1])});s.textContent=pts.length+' de '+CUR.length+' registros del periodo tienen coordenadas (los del Excel antiguo casi nunca las traen; el mapa se va llenando con los registros nuevos).'}
-    else{s.textContent='Consultando recorridos…';
-      const d=per.from.startsWith('0000')?0:new Date(per.from+'T00:00:00').getTime(),h=per.to.startsWith('9999')?Date.now()+1:new Date(per.to+'T23:59:59').getTime();
-      const r=need(await call('calor',{desde:d,hasta:h}));pts=r.pts;s.textContent=nf.format(pts.length)+' zonas con movimiento de unidades en el periodo ('+nf.format(r.total)+' posiciones guardadas).'}
+    if(capa==='emerg'){
+      const cat=$('calor-cat').value;
+      const rows=ALL.filter(r=>r.fecha>=rg.from&&r.fecha<=rg.to&&(!cat||r.cat===cat));
+      const con=[];rows.forEach(r=>{const c=coordDe(r);if(c){pts.push([c[0],c[1],1]);con.push({r,c})}});
+      s.textContent=nf.format(con.length)+' de '+nf.format(rows.length)+' emergencias ('+rg.label+(cat?' · '+tc(cat):'')+') tienen ubicación. Las del Excel antiguo casi nunca traen coordenadas; el mapa se va llenando con cada emergencia nueva.';
+      if($('calor-pts').checked)con.slice(0,1500).forEach(({r,c})=>{
+        const m=L.circleMarker(c,{radius:5,color:'#7a0f08',weight:1,fillColor:'#d62a1c',fillOpacity:.8});
+        m.bindPopup('<b>'+esc(r.id)+'</b><br>'+esc(tc(r.cat))+'<br>'+GEN.dmy(r.fecha)+' '+esc(r.hora||'')+'<br>'+esc(r.dir||'')+'<br><span class="m">'+esc(gms(c[0],c[1]))+'</span><br><a href="'+mapsUrl(c[0],c[1])+'" target="_blank" rel="noopener">Abrir en Google Maps</a>');CPTS.addLayer(m)});
+    }else{
+      s.textContent='Consultando recorridos…';
+      const d=rg.from.startsWith('0000')?0:new Date(rg.from+'T00:00:00').getTime(),h=rg.to.startsWith('9999')?Date.now()+1:new Date(rg.to+'T23:59:59').getTime();
+      const r=need(await call('calor',{desde:d,hasta:h,veh:$('calor-veh').value}));if(tok!==calorTok)return;
+      pts=r.pts;s.textContent=nf.format(pts.length)+' zonas con movimiento de unidades ('+rg.label+($('calor-veh').value?' · '+$('calor-veh').value:'')+'; '+nf.format(r.total)+' posiciones guardadas).';
+    }
   }catch(e){s.textContent='No se pudo consultar: '+humanErr(e)}
+  if(tok!==calorTok)return;
   if(HEAT){MC.removeLayer(HEAT);HEAT=null}
   if($('p-calor').hidden)return;
   MC.invalidateSize();if(MC.getSize().x<10||MC.getSize().y<10)return;
-  if(pts.length&&L.heatLayer){const mx=Math.max(...pts.map(p=>p[2]));HEAT=L.heatLayer(pts,{radius:24,blur:20,maxZoom:15,max:capa==='emerg'?Math.max(2,mx):mx}).addTo(MC);MC.fitBounds(pts.map(p=>[p[0],p[1]]),{maxZoom:14,padding:[30,30]})}
+  if(pts.length&&L.heatLayer){const mx=Math.max(...pts.map(p=>p[2]));HEAT=L.heatLayer(pts,{radius:24,blur:20,maxZoom:15,max:capa==='emerg'?Math.max(2,mx):mx}).addTo(MC);MC.fitBounds(pts.map(p=>[p[0],p[1]]),{maxZoom:15,padding:[30,30]})}
 }
 
-/* ================= DETALLE, CORRECCIÓN COMPLETA Y ANULACIÓN ================= */
-const bytesB64=u8=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(new Blob([u8]))});
-const repArg=r=>({...r,rpt:{...(r.rpt||{}),zona:r.zona||''}});
+/* ================= DETALLE, LÍNEA DE TIEMPO, IMPRESIÓN Y CORRECCIÓN (v3) ================= */
 function estadoPill(r){
   if(r.src!=='app')return '';
   if(r.anulado)return '<span class="pill bad">ANULADO</span>';
-  if(r.borrador)return '<span class="pill off">en curso</span>';
+  if(r.borrador)return '<span class="pill bad">borrador pendiente por diligenciar</span>';
   return r.completo?'<span class="pill on">completo</span>':'<span class="pill bad">incompleto</span>';
+}
+async function reducir(dataUrl,desc){
+  const bm=await createImageBitmap(await (await fetch(dataUrl)).blob());
+  const sc=Math.min(1,900/Math.max(bm.width,bm.height)),w=Math.round(bm.width*sc),h=Math.round(bm.height*sc);
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(bm,0,0,w,h);bm.close&&bm.close();
+  const blob=await new Promise(res=>cv.toBlob(res,'image/jpeg',.72));
+  return {data:new Uint8Array(await blob.arrayBuffer()),w,h,desc:desc||''};
+}
+async function fotosBajadas(r){
+  if(!(r.src==='app'&&r.nfotos))return [];
+  const m=(await metaDe([r.tmp]))[r.tmp]||[];return (await bajar(m)).filter(f=>f.d);
+}
+async function repData(r){
+  const out=[];
+  try{for(const f of await fotosBajadas(r))out.push(await reducir(f.d,f.desc))}catch(e){}
+  return {...repArg(r),fotos:out};
+}
+let LOGOS=null;
+async function logosRep(){
+  if(LOGOS)return LOGOS;
+  try{const z=await JSZip.loadAsync(await tpl('reporte_emergencias.xlsx'));const g=async n=>{const f=z.file('xl/media/'+n);return f?'data:image/png;base64,'+await f.async('base64'):''};LOGOS=[await g('image1.png'),await g('image2.png')]}catch(e){LOGOS=['','']}
+  return LOGOS;
+}
+/* Reporte de Emergencias listo para imprimir (formato institucional, con registro fotográfico) */
+async function imprimirReporte(r){
+  const w=window.open('','_blank');
+  if(!w){alert('El navegador bloqueó la ventana de impresión. Permita las ventanas emergentes para esta página y vuelva a intentarlo.');return}
+  w.document.write('<p style="font:16px sans-serif;padding:24px">Preparando el reporte para imprimir…</p>');
+  try{
+    const fs=(await fotosBajadas(r)).map(f=>({src:f.d,desc:f.desc||''}));
+    const lg=await logosRep();
+    const html=GEN.reporteHTML(repArg(r),{fotos:fs,logo1:lg[0],logo2:lg[1]});
+    w.document.open();w.document.write(html);w.document.close();
+  }catch(e){w.document.body.innerHTML='<p style="font:16px sans-serif;padding:24px">No se pudo preparar el reporte: '+esc(e.message||String(e))+'</p>'}
+}
+const TIPO_CAMB={crear:'Se creó el registro en el teléfono',terminar:'Se terminó y envió el reporte',correccion:'Corrección',anular:'Registro ANULADO',restaurar:'Registro restaurado',eliminar:'Registro ELIMINADO'};
+const CAMPO_TXT={cat:'Categoría',tipo:'Tipo',fecha:'Día',hora:'Hora de alerta',hsal:'Salida de estación',hlle:'Llegada al sitio',hfin:'Fin del servicio',durmin:'Duración (min)',dir:'Dirección',bar:'Barrio o vereda',zona:'Zona',lat:'Latitud',lon:'Longitud',area:'Área',veg:'Vegetación',canal:'Canal del aviso',rep:'Quién reportó',uni:'Unidades',veh:'Vehículo',desc:'Descripción',pers:'Personal',rpt:'Datos del reporte',inc:'Incendio forestal',extra:'Otros datos',estado:'Estado',_motivo:'Motivo',_registro:'Registro'};
+function valTxt(k,v){
+  if(v==null||v==='')return '—';
+  if(k==='rpt'||k==='inc'||k==='extra'){try{return JSON.stringify(typeof v==='string'?JSON.parse(v):v).slice(0,160)+'…'}catch(e){return String(v).slice(0,120)}}
+  if(Array.isArray(v))return v.map(x=>typeof x==='object'?JSON.stringify(x):x).join(', ').slice(0,200);
+  if(['hora','hsal','hlle','hfin'].includes(k))return h24(v)+' h';
+  return String(v).slice(0,300);
+}
+async function lineaTiempo(r,box){
+  box.innerHTML='<p class="derived">Cargando la línea de tiempo…</p>';
+  try{
+    const cs=need(await call('cambios',{tmp:r.tmp})).cambios.slice().reverse();
+    if(!cs.length){box.innerHTML='<p class="derived">Este registro todavía no tiene movimientos anotados (los anteriores a la versión 3 no tienen línea de tiempo).</p>';return}
+    box.innerHTML='<h4>Línea de tiempo de modificaciones (no se puede borrar)</h4>';
+    const ul=document.createElement('div');ul.className='timeline';
+    cs.forEach(c=>{
+      const d=document.createElement('div');d.className='tl';
+      const cm=c.cambios||{};const ks=Object.keys(cm).filter(k=>k!=='_motivo'&&k!=='_registro');
+      let det='';
+      if(c.tipo==='correccion'||c.tipo==='crear'||c.tipo==='terminar'){
+        det=ks.filter(k=>!(c.tipo!=='correccion'&&k==='estado'&&false)).map(k=>'<div><b>'+esc(CAMPO_TXT[k]||k)+':</b> «'+esc(valTxt(k,(cm[k]||[])[0]))+'» → «'+esc(valTxt(k,(cm[k]||[])[1]))+'»</div>').join('');
+      }
+      if(cm._motivo&&cm._motivo[0])det='<div><b>Motivo:</b> '+esc(cm._motivo[0])+'</div>'+det;
+      if(cm._registro&&cm._registro[0])det+='<div><b>Registro:</b> '+esc(cm._registro[0])+'</div>';
+      d.innerHTML='<div class="tlh"><b>'+esc(TIPO_CAMB[c.tipo]||c.tipo)+'</b> · '+esc(c.origen==='central'?'en la central':'desde el teléfono')+' · '+esc(c.quien||'—')+' · <span class="m">'+new Date(Number(c.cuando)).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'medium',hour12:false})+'</span></div>'+det;
+      ul.append(d);
+    });
+    box.append(ul);
+  }catch(e){box.innerHTML='<p class="derived">No se pudo leer la línea de tiempo: '+esc(humanErr(e))+'</p>'}
 }
 async function showDetail(r){
   const d=$('detail');d.hidden=false;
@@ -797,13 +1007,17 @@ async function showDetail(r){
   const app=r.src==='app',inc=r.inc||{};
   const incTxt=inc.tipo||inc.causa?'Tipo '+(GEN.SNIF_TIPO[inc.tipo]||inc.tipo||'—')+' · causa '+(GEN.SNIF_CAUSA[inc.causa]||inc.causa||'—')+' · cobertura '+(GEN.SNIF_AREA[inc.areaTipo]||inc.areaTipo||'—')+' · área protegida: '+(inc.prot||'—')+(inc.protNom?' ('+inc.protNom+')':''):'';
   const naL=app&&r.na?Object.keys(r.na).filter(k=>r.na[k]).length:0;
+  const co=coordDe(r);
+  const hh=x=>x?x+' h':'';
   d.innerHTML='<div class="detail"><h3>'+esc(r.id)+' · '+esc(tc(r.cat))+' '+estadoPill(r)+'</h3><dl>'+
-    [['Día',GEN.dmy(r.fecha)],['Alerta',r.hora],['Salida de estación',r.hsal],['Llegada al sitio',r.hlle],['Fin del servicio',r.hfin],['Respuesta (alerta a llegada)',lapse(r.hora,r.hlle)!=null?lapse(r.hora,r.hlle)+' min':''],['Aviso recibido por',r.canal],['Quién reportó',r.rep],['Personal que atendió',(r.pers||[]).join(', ')],['Tipo',tc(r.tipo||'')],['Duración',dur],['Lugar',r.dir],['Barrio o vereda',r.bar],['Coordenadas',r.coord||((r.lat&&r.lon)?r.lat+', '+r.lon:'')],['Área',r.area],['Incendio forestal',incTxt],['Unidades',r.uni],['Vehículo',r.veh],['Descripción',r.desc],['Registró',(r._nombre||'')+(r.usuario?' ('+r.usuario+')':'')],['Lesionados',r.les?r.les+(r.tras?' · trasladados a '+r.tras:''):''],['Puntos marcados «No aplica»',naL?String(naL):''],['Otros datos',r.extraTxt],['Formulario de Google',app?r.form||'':'']]
-      .filter(x=>x[1]!=null&&x[1]!=='').map(x=>'<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>').join('')+'</dl>'+
-    (app?'<p>'+(r.lat&&r.lon?'<a href="https://www.google.com/maps?q='+encodeURIComponent(r.lat+','+r.lon)+'" target="_blank" rel="noopener">Ver el lugar en el mapa</a>':'')+(r.carpeta?' · <a href="'+esc(r.carpeta)+'" target="_blank" rel="noopener">Carpeta de la emergencia en Drive</a>':'')+(r.doc?' · <a href="'+esc(r.doc)+'" target="_blank" rel="noopener">Reporte de Emergencias en Drive</a>':' · <span class="derived">el reporte aún no está en Drive</span>')+'</p>':'')+
-    '<div class="fotos" id="dfotos"></div><div class="dl"><button class="btn alt sm" id="d-rep">Reporte de Emergencias (.xlsx)</button>'+(app&&r.nfotos?'<button class="btn alt sm" id="d-foto">Registro fotográfico (.docx)</button>':'')+(app&&!r.borrador?'<button class="btn alt sm" id="d-drive">Guardar el reporte en Drive</button>':'')+(app?'<button class="btn alt sm" id="d-edit">Corregir datos</button>':'')+(app&&esMaster()?'<button class="btn alt sm" id="d-anul">'+(r.anulado?'Restaurar registro':'Anular registro')+'</button>':'')+'</div><div id="d-form"></div><div class="derived" id="d-msg"></div></div>';
+    [['Día',GEN.dmy(r.fecha)],['Alerta',hh(r.hora)],['Salida de estación',hh(r.hsal)],['Llegada al sitio',hh(r.hlle)],['Fin del servicio',hh(r.hfin)],['Respuesta (alerta a llegada)',lapse(r.hora,r.hlle)!=null?lapse(r.hora,r.hlle)+' min':''],['Aviso recibido por',r.canal],['Quién reportó',r.rep],['Personal que atendió',(r.pers||[]).join(', ')],['Tipo',tc(r.tipo||'')],['Duración',dur],['Lugar',r.dir],['Barrio o vereda',r.bar],['Coordenadas',co?gms(co[0],co[1]):(r.coord||'')],['Área',r.area],['Incendio forestal',incTxt],['Unidades',r.uni],['Vehículo',r.veh],['Descripción',r.desc],['Registró',(r._nombre||'')+(r.usuario?' ('+r.usuario+')':'')],['Lesionados',r.les?r.les+(r.tras?' · trasladados a '+r.tras:''):''],['Puntos marcados «No aplica»',naL?String(naL):''],['Otros datos',r.extraTxt],['Formulario de Google',app?r.form||'':'']]
+      .filter(x=>x[1]!=null&&x[1]!=='').map(x=>'<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>').join('')+'</dl><div id="d-ub"></div>'+
+    (app?'<p>'+(!co&&r.dir?'<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(r.dir+', La Unión, Valle del Cauca')+'" target="_blank" rel="noopener">Buscar la dirección en el mapa (el registro no trae coordenadas)</a> · ':'')+(r.carpeta?'<a href="'+esc(r.carpeta)+'" target="_blank" rel="noopener">Carpeta de la emergencia en Drive</a>':'')+(r.doc?' · <a href="'+esc(r.doc)+'" target="_blank" rel="noopener">Reporte de Emergencias en Drive</a>':' · <span class="derived">el reporte aún no está en Drive</span>')+'</p>':'')+
+    '<div class="fotos" id="dfotos"></div><div class="dl"><button class="btn sm" id="d-print">Imprimir reporte</button><button class="btn alt sm" id="d-rep">Descargar Reporte de Emergencias (.xlsx)</button>'+(app&&r.nfotos?'<button class="btn alt sm" id="d-foto">Registro fotográfico (.docx)</button>':'')+(app&&!r.borrador?'<button class="btn alt sm" id="d-drive">Guardar el reporte en Drive</button>':'')+(app&&esMaster()?'<button class="btn alt sm" id="d-edit">Corregir datos (superadministrador)</button><button class="btn alt sm" id="d-anul">'+(r.anulado?'Restaurar registro':'Anular registro')+'</button><button class="btn alt sm" id="d-del">Eliminar registro</button>':'')+'</div><div id="d-form"></div><div class="derived" id="d-msg"></div><div id="d-tl"></div></div>';
+  if(co)$('d-ub').append(ubicActs(co[0],co[1],r.id));
   d.scrollIntoView({behavior:'smooth',block:'nearest'});
-  $('d-rep').onclick=()=>run($('d-msg'),async()=>{await save('REPORTE DE EMERGENCIAS '+r.id+'.xlsx',await GEN.reporteEmergencia(JSZip,await tpl('reporte_emergencias.xlsx'),repArg(r)))});
+  $('d-print').onclick=async()=>{$('d-print').disabled=true;await imprimirReporte(r);$('d-print').disabled=false};
+  $('d-rep').onclick=()=>run($('d-msg'),async()=>{await save('REPORTE DE EMERGENCIAS '+r.id+'.xlsx',await GEN.reporteEmergencia(JSZip,await tpl('reporte_emergencias.xlsx'),await repData(r)))});
   if($('d-drive'))$('d-drive').onclick=()=>run($('d-msg'),async()=>{const u=await subirDoc(r);r.doc=u;$('d-msg').textContent='Guardado en la carpeta de la emergencia en Drive.'});
   if(app&&r.nfotos){
     let fotos=null;const get=async()=>{if(fotos)return fotos;const m=(await metaDe([r.tmp]))[r.tmp]||[];fotos=await bajar(m);return fotos};
@@ -812,14 +1026,96 @@ async function showDetail(r){
       const titulo=('REGISTRO FOTOGRÁFICO · '+r.id+' · '+r.cat+' · '+GEN.dmy(r.fecha)+(r.dir?' · '+r.dir:'')).toUpperCase().slice(0,120);
       await save('REGISTRO FOTOGRAFICO '+r.id+'.docx',await GEN.fotografico(JSZip,await tpl('registro_fotografico.docx'),{titulo,fotos:await paraDocx(fs)}))});
   }
-  if(app)$('d-edit').onclick=()=>editForm(r);
+  if(app)lineaTiempo(r,$('d-tl'));
+  if($('d-edit'))$('d-edit').onclick=()=>editForm(r);
   if($('d-anul'))$('d-anul').onclick=async()=>{
-    const mot=prompt(r.anulado?'Motivo para restaurar el registro:':'Motivo para ANULAR el registro (queda anotado; el registro sale de la estadística y no se borra):');if(!mot)return;
-    try{need(await call('anular',{tmp:r.tmp,motivo:mot,valor:r.anulado?false:true}));await loadAll();renderPanel();const o=REGS.get(r.tmp);if(o)showDetail(toRow(o));$('d-msg').textContent='Hecho y anotado en auditoría.'}catch(e){$('d-msg').textContent='No se pudo: '+humanErr(e)}
+    const mot=prompt(r.anulado?'Motivo para restaurar el registro:':'Motivo para ANULAR el registro (queda anotado en la línea de tiempo; el registro sale de la estadística y no se borra):');if(!mot)return;
+    try{need(await call('anular',{tmp:r.tmp,motivo:mot,valor:r.anulado?false:true}));await loadAll();renderPanel();const o=REGS.get(r.tmp);if(o)showDetail(toRow(o));$('d-msg').textContent='Hecho y anotado en la línea de tiempo.'}catch(e){$('d-msg').textContent='No se pudo: '+humanErr(e)}
+  };
+  if($('d-del'))$('d-del').onclick=async()=>{
+    const mot=prompt('ELIMINAR el registro '+r.id+'.\nSale de la estadística, la hoja y el consecutivo queda libre si era el último. Queda guardado en «Eliminados» y en la auditoría.\n\nEscriba el motivo para continuar:');if(!mot)return;
+    if(!confirm('¿Seguro que desea eliminar '+r.id+'?'))return;
+    try{need(await call('eliminar',{tmp:r.tmp,motivo:mot}));await loadAll();renderPanel();d.hidden=true;note('Registro '+r.id+' eliminado. Quedó anotado en Auditoría → Registros eliminados.');setTimeout(()=>note(''),8000)}catch(e){$('d-msg').textContent='No se pudo: '+humanErr(e)}
   };
 }
+/* hora en casillas (hora, minutos, AM/PM) también en la central */
+function timeSel(val){
+  const w=document.createElement('span');w.className='tpick';
+  const x=/^\d\d:\d\d$/.test(val||'')?(()=>{let h=+val.slice(0,2);return{h:String(h%12||12),m:val.slice(3),ap:h>=12?'PM':'AM'}})():{h:'',m:'',ap:''};
+  const mk=(ops,cur,lab)=>{const s=document.createElement('select');s.setAttribute('aria-label',lab);s.append(new Option('--',''));ops.forEach(o=>s.append(new Option(o,o)));s.value=cur;return s};
+  const sh=mk(Array.from({length:12},(_,i)=>String(i+1)),x.h,'Hora'),sm=mk(Array.from({length:60},(_,i)=>pad(i,2)),x.m,'Minutos'),sa=mk(['AM','PM'],x.ap,'AM o PM');
+  w.append(sh,sm,sa);
+  w.getVal=()=>{if(!sh.value||!sm.value||!sa.value)return '';let h=(+sh.value)%12;if(sa.value==='PM')h+=12;return pad(h,2)+':'+sm.value};
+  return w;
+}
+/* Edición completa (solo superadministrador): se genera a partir del esquema del formulario del celular */
+function editForm(r){
+  if(!esMaster())return;
+  const o=REGS.get(r.tmp);if(!o)return;
+  const base=clone(o),box=$('d-form');box.innerHTML='';
+  const card=document.createElement('div');card.className='card';card.style.marginTop='8px';box.append(card);
+  card.innerHTML='<p class="derived">Solo el superadministrador puede corregir en la central, sin límite de tiempo. Cada cambio queda en la línea de tiempo del reporte con quién, cuándo, el motivo y el valor anterior; eso no se puede borrar.</p>';
+  const getters=[];
+  const lab=(t,c)=>{const l=document.createElement('label');l.style.marginTop='6px';l.append(document.createTextNode(t));l.append(c);return l};
+  const mk=(f,v)=>{
+    let c,get;const val=v==null?'':v;
+    switch(f.t){
+      case 'num':c=document.createElement('input');c.type='number';c.value=val;get=()=>c.value===''?null:+c.value;break;
+      case 'date':c=document.createElement('input');c.type='date';c.value=val;get=()=>c.value;break;
+      case 'time':c=timeSel(h24(val));get=()=>c.getVal();break;
+      case 'area':c=document.createElement('textarea');c.value=val;get=()=>c.value.trim();break;
+      case 'cat':c=document.createElement('select');CATS.forEach(x=>c.append(new Option(x,x)));if(!CATS.includes(val)&&val)c.append(new Option(val,val));c.value=val;get=()=>c.value;break;
+      case 'sel':case 'selv':{c=document.createElement('select');c.append(new Option('(vacío)',''));(f.o||[]).map(x=>Array.isArray(x)?x:[x,x]).forEach(([a,b])=>c.append(new Option(b,a)));if(val&&![...c.options].some(x=>x.value===val))c.append(new Option(val,val));c.value=val;get=()=>c.value;break}
+      case 'yn':c=document.createElement('select');['','SI','NO'].forEach(x=>c.append(new Option(x||'(vacío)',x)));c.value=val;get=()=>c.value;break;
+      case 'pers':c=document.createElement('input');c.value=(Array.isArray(v)?v:[]).join(', ');get=()=>c.value.split(',').map(s=>s.trim()).filter(Boolean);break;
+      case 'pair':{c=document.createElement('input');const a=Array.isArray(v)?v:['',''];c.value=a.join(' | ');c.placeholder='unidades | vehículos';get=()=>{const p=c.value.split('|').map(s=>s.trim());return [p[0]||'',p[1]||'']};break}
+      case 'list':{const L=E.LISTAS[f.lista];c=document.createElement('textarea');c.rows=3;c.placeholder='Una fila por línea: '+L.cols.map(x=>x[1]).join(' | ')+(f.lista==='acc'?' (la hora en 24 h, ej. 14:35)':'');c.value=(Array.isArray(v)?v:[]).map(x=>L.cols.map(cc=>x[cc[0]]||'').join(' | ')).join('\n');
+        get=()=>c.value.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{const p=line.split('|').map(s=>s.trim()),ob={};L.cols.forEach((cc,i)=>ob[cc[0]]=p[i]||'');return ob});break}
+      case 'sci':{c=document.createElement('textarea');c.rows=4;c.value=JSON.stringify(v||{},null,1);c.placeholder='Datos del organigrama (formato técnico)';get=()=>{try{return JSON.parse(c.value||'{}')}catch(e){throw new Error('El organigrama del incidente no tiene un formato válido.')}};break}
+      case 'hec':c=document.createElement('input');c.value=String(val).replace(/\s*HA$/i,'');get=()=>{const t=c.value.trim().replace(',','.');return t?t+' HA':''};break;
+      default:c=document.createElement('input');c.value=val;get=()=>c.value.trim();
+    }
+    return {c,get};
+  };
+  const extras=((CFGP.form||{}).extras||[]).map(x=>({p:'extra.'+x.id,l:(x.l||x.id)+' (campo adicional)',t:x.t==='area'?'area':x.t==='num'?'num':'text',step:x.step}));
+  let gpsIn=null;
+  E.STEPS.forEach(s=>{
+    if(s.id==='fotos')return;
+    const h=document.createElement('div');h.className='stepH';h.textContent=s.t;card.append(h);
+    const gd=document.createElement('div');gd.className='row';card.append(gd);
+    s.f.concat(extras.filter(x=>x.step===s.id)).forEach(f=>{
+      if(f.t==='gps'){
+        gpsIn=document.createElement('input');gpsIn.value=okNum(base.lat)&&okNum(base.lon)?gms(base.lat,base.lon):'';gpsIn.placeholder='4°31\'50.2"N 76°06\'29.5"W  (también acepta decimales)';
+        gd.append(lab('Coordenadas (grados, minutos y segundos)',gpsIn));
+        getters.push({p:'lat',get:()=>{const t=gpsIn.value.trim();if(!t)return '';const p=parseCoord(t);if(!p)throw new Error('No entendí las coordenadas.');return p.lat}});
+        getters.push({p:'lon',get:()=>{const t=gpsIn.value.trim();if(!t)return '';const p=parseCoord(t);if(!p)throw new Error('No entendí las coordenadas.');return p.lon}});return}
+      const g=mk(f,getP(base,f.p));gd.append(lab(f.l,g.c));getters.push({p:f.p,get:g.get});
+    });
+  });
+  const h=document.createElement('div');h.className='stepH';h.textContent='Estado del registro';card.append(h);
+  const est=document.createElement('select');['final','borrador'].forEach(x=>est.append(new Option(x==='final'?'Terminado':'Borrador pendiente por diligenciar',x)));est.value=base.estado||'final';card.append(lab('Estado',est));
+  const mot=document.createElement('input');card.append(lab('Motivo de la corrección (obligatorio)',mot));
+  const err=document.createElement('div');err.className='err';err.id='e-err';card.append(err);
+  const sv=document.createElement('button');sv.className='btn sm';sv.textContent='Guardar corrección';card.append(sv);
+  sv.onclick=async()=>{
+    if(!mot.value.trim()){err.textContent='Escriba el motivo.';return}
+    const nv=clone(base);
+    try{getters.forEach(g=>setP(nv,g.p,g.get()))}catch(e){err.textContent=e.message;return}
+    nv.estado=est.value;nv.tipo=TIPO_CAT[nv.cat]||nv.tipo||'OTROS';
+    const KEYS=['cat','tipo','fecha','hora','hsal','hlle','hfin','durmin','dir','bar','zona','lat','lon','area','veg','canal','rep','uni','veh','desc','pers','rpt','inc','extra','estado'];
+    const cambios={};KEYS.forEach(k=>{const a=JSON.stringify(base[k]==null?'':base[k]),b=JSON.stringify(nv[k]==null?'':nv[k]);if(a!==b)cambios[k]=nv[k]==null?'':nv[k]});
+    if(!Object.keys(cambios).length){err.textContent='No hay cambios.';return}
+    sv.disabled=true;
+    try{need(await call('edit',{tmp:r.tmp,cambios,motivo:mot.value.trim(),por:YO}));await loadAll();renderPanel();const o2=REGS.get(r.tmp);if(o2)await showDetail(toRow(o2));const mm=$('d-msg');if(mm)mm.textContent='Corrección guardada y anotada en la línea de tiempo.'}
+    catch(e){err.textContent='No se pudo guardar la corrección: '+humanErr(e);sv.disabled=false}
+  };
+}
+
+/* ================= DETALLE, CORRECCIÓN COMPLETA Y ANULACIÓN ================= */
+const bytesB64=u8=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(new Blob([u8]))});
+const repArg=r=>({...r,rpt:{...(r.rpt||{}),zona:r.zona||''}});
 async function subirDoc(r){
-  const u8=await GEN.reporteEmergencia(JSZip,await tpl('reporte_emergencias.xlsx'),repArg(r));
+  const u8=await GEN.reporteEmergencia(JSZip,await tpl('reporte_emergencias.xlsx'),await repData(r));
   const j=need(await call('doc',{tmp:r.tmp,d:await bytesB64(u8),nombre:'REPORTE DE EMERGENCIAS '+r.id+'.xlsx'},{ms:120000}));
   const o=REGS.get(r.tmp);if(o)o.doc=j.url;return j.url;
 }
@@ -831,60 +1127,6 @@ async function docsBulk(){
   for(let i=0;i<falta.length;i++){m.textContent='Guardando '+(i+1)+' de '+falta.length+'…';try{await subirDoc(toRow(falta[i]));ok++}catch(e){mal++;ult=humanErr(e)}}
   m.textContent='Listo: '+ok+' guardados'+(mal?', '+mal+' con error ('+ult+')':'')+'.';b.disabled=false;
 }
-/* Edición completa: se genera a partir del esquema del formulario del celular */
-function editForm(r){
-  const o=REGS.get(r.tmp);if(!o)return;
-  const base=clone(o),box=$('d-form');box.innerHTML='';
-  const card=document.createElement('div');card.className='card';card.style.marginTop='8px';box.append(card);
-  card.innerHTML='<p class="derived">Puede cambiar cualquier dato. Todo cambio queda anotado en auditoría con el motivo y el valor anterior.</p>';
-  const getters=[];
-  const lab=(t,c)=>{const l=document.createElement('label');l.style.marginTop='6px';l.append(document.createTextNode(t));l.append(c);return l};
-  const mk=(f,v)=>{
-    let c,get;const val=v==null?'':v;
-    switch(f.t){
-      case 'num':c=document.createElement('input');c.type='number';c.value=val;get=()=>c.value===''?null:+c.value;break;
-      case 'date':c=document.createElement('input');c.type='date';c.value=val;get=()=>c.value;break;
-      case 'time':c=document.createElement('input');c.type='time';c.value=val;get=()=>c.value;break;
-      case 'area':c=document.createElement('textarea');c.value=val;get=()=>c.value.trim();break;
-      case 'cat':c=document.createElement('select');CATS.forEach(x=>c.append(new Option(x,x)));if(!CATS.includes(val)&&val)c.append(new Option(val,val));c.value=val;get=()=>c.value;break;
-      case 'sel':case 'selv':{c=document.createElement('select');c.append(new Option('(vacío)',''));(f.o||[]).map(x=>Array.isArray(x)?x:[x,x]).forEach(([a,b])=>c.append(new Option(b,a)));if(val&&![...c.options].some(x=>x.value===val))c.append(new Option(val,val));c.value=val;get=()=>c.value;break}
-      case 'yn':c=document.createElement('select');['','SI','NO'].forEach(x=>c.append(new Option(x||'(vacío)',x)));c.value=val;get=()=>c.value;break;
-      case 'pers':c=document.createElement('input');c.value=(Array.isArray(v)?v:[]).join(', ');get=()=>c.value.split(',').map(s=>s.trim()).filter(Boolean);break;
-      case 'pair':{c=document.createElement('input');const a=Array.isArray(v)?v:['',''];c.value=a.join(' | ');c.placeholder='unidades | vehículos';get=()=>{const p=c.value.split('|').map(s=>s.trim());return [p[0]||'',p[1]||'']};break}
-      case 'list':{const L=E.LISTAS[f.lista];c=document.createElement('textarea');c.rows=3;c.placeholder='Una fila por línea: '+L.cols.map(x=>x[1]).join(' | ');c.value=(Array.isArray(v)?v:[]).map(x=>L.cols.map(cc=>x[cc[0]]||'').join(' | ')).join('\n');
-        get=()=>c.value.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{const p=line.split('|').map(s=>s.trim()),ob={};L.cols.forEach((cc,i)=>ob[cc[0]]=p[i]||'');return ob});break}
-      case 'hec':c=document.createElement('input');c.value=String(val).replace(/\s*HA$/i,'');get=()=>{const t=c.value.trim().replace(',','.');return t?t+' HA':''};break;
-      default:c=document.createElement('input');c.value=val;get=()=>c.value.trim();
-    }
-    return {c,get};
-  };
-  const extras=((CFGP.form||{}).extras||[]).map(x=>({p:'extra.'+x.id,l:(x.l||x.id)+' (campo adicional)',t:x.t==='area'?'area':x.t==='num'?'num':'text',step:x.step}));
-  E.STEPS.forEach(s=>{
-    if(s.id==='fotos')return;
-    const h=document.createElement('div');h.className='stepH';h.textContent=s.t;card.append(h);
-    const gd=document.createElement('div');gd.className='row';card.append(gd);
-    s.f.concat(extras.filter(x=>x.step===s.id)).forEach(f=>{
-      if(f.t==='gps'){['lat','lon'].forEach(k=>{const g=mk({t:'text'},base[k]);gd.append(lab(k==='lat'?'Latitud':'Longitud',g.c));getters.push({p:k,get:g.get})});return}
-      const g=mk(f,getP(base,f.p));gd.append(lab(f.l,g.c));getters.push({p:f.p,get:g.get});
-    });
-  });
-  const h=document.createElement('div');h.className='stepH';h.textContent='Estado del registro';card.append(h);
-  const est=document.createElement('select');['final','borrador'].forEach(x=>est.append(new Option(x==='final'?'Terminado':'En curso',x)));est.value=base.estado||'final';card.append(lab('Estado',est));
-  const mot=document.createElement('input');card.append(lab('Motivo de la corrección (obligatorio)',mot));
-  const err=document.createElement('div');err.className='err';err.id='e-err';card.append(err);
-  const sv=document.createElement('button');sv.className='btn sm';sv.textContent='Guardar corrección';card.append(sv);
-  sv.onclick=async()=>{
-    if(!mot.value.trim()){err.textContent='Escriba el motivo.';return}
-    const nv=clone(base);getters.forEach(g=>setP(nv,g.p,g.get()));nv.estado=est.value;nv.tipo=TIPO_CAT[nv.cat]||nv.tipo||'OTROS';
-    const KEYS=['cat','tipo','fecha','hora','hsal','hlle','hfin','durmin','dir','bar','zona','lat','lon','area','veg','canal','rep','uni','veh','desc','pers','rpt','inc','extra','estado'];
-    const cambios={};KEYS.forEach(k=>{const a=JSON.stringify(base[k]==null?'':base[k]),b=JSON.stringify(nv[k]==null?'':nv[k]);if(a!==b)cambios[k]=nv[k]==null?'':nv[k]});
-    if(!Object.keys(cambios).length){err.textContent='No hay cambios.';return}
-    sv.disabled=true;
-    try{need(await call('edit',{tmp:r.tmp,cambios,motivo:mot.value.trim(),por:YO}));await loadAll();renderPanel();const o2=REGS.get(r.tmp);if(o2)await showDetail(toRow(o2));const mm=$('d-msg');if(mm)mm.textContent='Corrección guardada y anotada en auditoría.'}
-    catch(e){err.textContent='No se pudo guardar la corrección: '+humanErr(e);sv.disabled=false}
-  };
-}
-
 /* ================= FORMATO DE INCENDIOS FORESTALES (SNIF) ================= */
 function snifItems(from,to){
   const lonNeg=!!((CFGP.app||{}).snifLonNeg);
@@ -922,25 +1164,6 @@ const H=(tag,props,...kids)=>{const e=document.createElement(tag);Object.assign(
 const card=(...k)=>{const c=H('div',{className:'card'});k.forEach(x=>c.append(x));return c};
 const lbl=(t,c,style)=>{const l=H('label',{},t,c);if(style)l.style.cssText=style;return l};
 function setBox(...cards){const b=$('a-box');b.innerHTML='';cards.forEach(c=>b.append(c))}
-
-/* --- usuarios --- */
-async function admUsr(){
-  let us;try{us=need(await call('usersGet')).users}catch(e){setBox(card(H('p',{className:'err'},'No se pudo leer: '+humanErr(e))));return}
-  const nm=H('input',{placeholder:'Nombre completo'}),us_=H('input',{placeholder:'usuario (sin espacios ni tildes)',autocapitalize:'off'}),
-    rol=H('select'),cl=H('input',{type:'password',placeholder:'Clave (mínimo 6 caracteres)',autocomplete:'new-password'}),act=H('input',{type:'checkbox',checked:true}),msg=H('div',{className:'derived',role:'status'});
-  rol.append(new Option('Central (estadística, mapas, correcciones)','central'),new Option('Administrador maestro (todo)','master'));
-  const form=card(H('h3',{},'Agregar o modificar un usuario'),H('p',{className:'derived'},'Los usuarios entran a esta página de Estadística. Los bomberos del celular NO necesitan usuario: usan el código de la estación (pestaña «Aplicación y alertas»). Para cambiar la clave de alguien escriba su mismo usuario con la clave nueva; si deja la clave vacía al editar, no cambia.'),
-    H('div',{className:'tools'},lbl('Usuario',us_),lbl('Nombre',nm),lbl('Rol',rol),lbl('Clave',cl)),
-    H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},act,'Activo'),
-    (()=>{const b=H('button',{className:'btn sm',textContent:'Guardar usuario'});b.onclick=async()=>{
-      try{need(await call('userSet',{usuario:us_.value,nombre:nm.value,rol:rol.value,clave:cl.value,activo:act.checked}));msg.textContent='Guardado.';admUsr()}catch(e){msg.textContent=humanErr(e)}};return b})(),msg);
-  const t=H('table');t.innerHTML='<tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th></th></tr>';
-  us.forEach(u=>{const tr=H('tr');tr.innerHTML='<td class="m">'+esc(u.usuario)+'</td><td>'+esc(u.nombre)+'</td><td>'+(u.rol==='master'?'Administrador':'Central')+'</td><td>'+(u.activo?'<span class="pill on">activo</span>':'<span class="pill off">desactivado</span>')+'</td>';
-    const td=H('td');const e=H('button',{className:'btn alt sm',textContent:'Editar'});e.onclick=()=>{us_.value=u.usuario;nm.value=u.nombre;rol.value=u.rol;act.checked=u.activo;cl.value='';cl.placeholder='Clave nueva (vacío = no cambiar)';form.scrollIntoView({behavior:'smooth'})};
-    const d=H('button',{className:'btn alt sm',textContent:'Eliminar'});d.onclick=async()=>{if(!confirm('¿Eliminar al usuario '+u.usuario+'?'))return;try{need(await call('userDel',{usuario:u.usuario}));admUsr()}catch(x){alert(humanErr(x))}};
-    td.append(e,' ',d);tr.append(td);t.append(tr)});
-  setBox(form,card(H('div',{className:'scroll'},t)));
-}
 
 /* --- formulario del celular --- */
 function admFrm(){
@@ -1004,33 +1227,6 @@ function admFrm(){
   setBox(...out);
 }
 
-/* --- aplicación y alertas --- */
-async function admApp(){
-  let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBox(card(H('p',{className:'err'},humanErr(e))));return}
-  const a=Object.assign({titulo:'Registrar emergencia',org:'CBV La Unión',sosTel:'',sosSirena:true,gpsSeg:20,snifLonNeg:false},c.app||{});
-  const t=H('input',{value:a.titulo}),o=H('input',{value:a.org}),tel=H('input',{value:a.sosTel,inputMode:'tel',placeholder:'3001234567'}),gp=H('input',{type:'number',min:10,max:120,value:a.gpsSeg}),
-    sir=H('input',{type:'checkbox',checked:a.sosSirena!==false}),ln=H('input',{type:'checkbox',checked:!!a.snifLonNeg}),
-    est=H('input',{value:c.estacion||'',placeholder:'(vacío = el que escribió en el script)'}),em=H('textarea',{rows:2,value:c.emails||'',placeholder:'correo1@gmail.com, correo2@gmail.com'});
-  const msg=H('div',{className:'derived',role:'status'});
-  const b=H('button',{className:'btn',textContent:'Guardar'});
-  b.onclick=async()=>{b.disabled=true;msg.textContent='Guardando…';
-    try{
-      const app={titulo:t.value.trim()||'Registrar emergencia',org:o.value.trim()||'CBV La Unión',sosTel:tel.value.trim(),sosSirena:sir.checked,gpsSeg:Math.max(10,Math.min(120,+gp.value||20)),snifLonNeg:ln.checked};
-      need(await call('cfgSet',{clave:'app',valor:app}));need(await call('cfgSet',{clave:'emails',valor:em.value.trim()}));
-      if(est.value.trim()&&est.value.trim()!==c.estacion){if(!confirm('Va a cambiar el código de la estación. Los teléfonos con el código anterior dejarán de poder enviar hasta que lo cambien en Ajustes. ¿Continuar?')){b.disabled=false;msg.textContent='';return}need(await call('cfgSet',{clave:'estacion',valor:est.value.trim()}))}
-      CFGP.app=app;aplicarCfg(CFGP);msg.textContent='Guardado.'
-    }catch(e){msg.textContent='No se pudo guardar: '+humanErr(e)}b.disabled=false};
-  const test=H('button',{className:'btn alt',textContent:'Enviar correo de prueba de SOS'});
-  test.onclick=async()=>{msg.textContent='Enviando prueba…';try{const r=need(await call('sos',{por:'PRUEBA (ignore)',msg:'Prueba del sistema de alertas',cid:'test'+Date.now()}));msg.textContent='Alerta de prueba creada. Correo: '+r.correo+'. Márquela como atendida en la parte de arriba.';pollVivo()}catch(e){msg.textContent=humanErr(e)}};
-  setBox(card(H('h3',{},'Textos y teléfono'),H('div',{className:'tools'},lbl('Título de la aplicación del celular',t),lbl('Nombre de la institución',o)),
-    H('h3',{},'Código de la estación (el que usan los bomberos)'),lbl('Código',est),H('p',{className:'derived'},'Es la «contraseña» que se escribe una sola vez en cada teléfono. Cámbielo si se filtra o sale alguien.')),
-    card(H('h3',{},'Botón de emergencia SOS y ubicación'),H('div',{className:'tools'},lbl('Teléfono de Comandancia para el mensaje SMS (opcional)',tel),lbl('Cada cuántos segundos se envía la ubicación en vivo',gp)),
-      H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},sir,'Sonar la sirena también en el teléfono de quien activa el SOS'),
-      lbl('Correos que reciben la alerta SOS (separados por coma)',em),H('div',{className:'dl'},test)),
-    card(H('h3',{},'Formato de incendios forestales (SNIF)'),H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},ln,'Escribir los grados de longitud con signo negativo (-76). Déjelo apagado para que salga 76, como en el archivo que usted ya venía llenando.')),
-    card(H('div',{className:'dl'},b),msg));
-}
-
 /* --- formulario de Google --- */
 async function admGfm(){
   let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBox(card(H('p',{className:'err'},humanErr(e))));return}
@@ -1064,18 +1260,199 @@ function admHis(){
 }
 function renderAdmHisInfo(p){p.textContent=(HISTOK?'Cargado: '+nf.format((HISTROWS||[]).length)+' registros 2021–2026, series 2013–2020 y '+SNIF_SEED.length+' incendios del formato SNIF (corte '+SNIF_CORTE+').':'Aún no está cargado.')}
 
-/* --- diagnóstico --- */
+
+/* ================= PERSONAL, AUDITORÍA Y ADMINISTRACIÓN (v3) ================= */
+let PLIST=[],PRANGOS=[],PFILT='';
+const PCOLS=[['nombre','Nombre completo',22],['grado','Grado',12],['cargo','Cargo',12],['cedula','Cédula (usuario y clave inicial)',13],['telefono','Teléfono',14],['correo','Correo',20],['rh','RH',4],['eps','EPS',14],['emergencia','Contacto de emergencia',18],['notas','Notas',16]];
+let PMSG='';
+async function renderPers(){
+  const box=$('p-per');box.innerHTML='';
+  const c=card(H('p',{className:'derived'},'Cargando el personal…'));box.append(c);
+  try{const r=need(await call('personalGet'));PLIST=r.personal||[];PRANGOS=r.rangos||[]}catch(e){c.innerHTML='<p class="err">No se pudo leer el personal: '+esc(humanErr(e))+'</p>';return}
+  drawPers();
+}
+function partDe(nombre){const n=String(nombre||'').trim().toLowerCase();let c=0,h=0;(CUR||[]).forEach(r=>{if((r.pers||[]).some(x=>String(x).trim().toLowerCase()===n)){c++;h+=Number(r.durmin)||0}});return [c,h]}
+function drawPers(){
+  const box=$('p-per');box.innerHTML='';
+  const msg=H('div',{className:'derived',role:'status'},PMSG);PMSG='';
+  const q=H('input',{placeholder:'Buscar por nombre, grado o cédula',value:PFILT});
+  const info=H('p',{className:'derived'},'Cada persona entra a la aplicación con su cédula como usuario y como clave inicial; después puede cambiarla desde «Ajustes» del celular. Si alguien la olvida, use «Restablecer clave»: queda otra vez igual a su cédula (o la que usted escriba) y la persona puede cambiarla. Solo desde el grado de bombero hacia arriba atienden emergencias (columna «Atiende»). Las participaciones y horas se cuentan con el periodo y los filtros de arriba.');
+  const t=H('table');
+  const head='<tr><th>#</th>'+PCOLS.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Atiende emergencias</th><th>Activo</th>'+(esMaster()?'<th>Acceso a Estadística</th><th>Clave</th>':'')+'<th class="n">Participaciones</th><th class="n">Horas</th><th></th></tr>';
+  const body=H('tbody');
+  const draw=()=>{
+    PFILT=q.value;const f=PFILT.trim().toLowerCase();
+    body.innerHTML='';
+    PLIST.forEach((p,i)=>{
+      if(f&&![p.nombre,p.grado,p.cedula].some(x=>String(x||'').toLowerCase().includes(f)))return;
+      const tr=H('tr');tr.append(H('td',{className:'m'},String(i+1)));
+      PCOLS.forEach(c=>{const inp=H('input',{value:p[c[0]]||'',size:c[2]});inp.setAttribute('aria-label',c[1]+' de '+(p.nombre||'persona nueva'));inp.oninput=()=>{p[c[0]]=inp.value;marcar()};const td=H('td');td.append(inp);tr.append(td)});
+      const op=H('select');[['auto','Automático por grado'],['si','Sí'],['no','No']].forEach(x=>op.append(new Option(x[1],x[0])));op.value=p.operativo==='si'||p.operativo==='no'?p.operativo:'auto';op.onchange=()=>{p.operativo=op.value;marcar()};
+      const act=H('input',{type:'checkbox',checked:String(p.activo).toLowerCase()!=='no'});act.onchange=()=>{p.activo=act.checked?'si':'no';marcar()};
+      tr.append(H('td',{},op),H('td',{},act));
+      if(esMaster()){
+        const ac=H('select');[['','Solo la aplicación del celular'],['central','Central (estadística)'],['master','Superadministrador']].forEach(x=>ac.append(new Option(x[1],x[0])));ac.value=p.acceso||'';ac.onchange=()=>{p.acceso=ac.value;marcar()};
+        const rs=H('button',{className:'btn alt sm',textContent:'Restablecer clave'});
+        rs.onclick=()=>resetClave(p,msg);
+        tr.append(H('td',{},ac),H('td',{},rs));
+      }
+      const [n,h]=partDe(p.nombre);
+      tr.append(H('td',{className:'n'},String(n)),H('td',{className:'n'},(h/60).toLocaleString('es-CO',{maximumFractionDigits:1})));
+      const del=H('button',{className:'btn alt sm',textContent:'Quitar'});del.onclick=()=>{if(!confirm('¿Quitar a '+(p.nombre||'esta persona')+' de la lista? (Si solo salió de la institución es mejor desmarcar «Activo».)'))return;PLIST.splice(i,1);marcar();draw()};
+      tr.append(H('td',{},del));body.append(tr);
+    });
+  };
+  let sucio=false;const sv=H('button',{className:'btn',textContent:'Guardar cambios del personal'});
+  const marcar=()=>{sucio=true;msg.textContent='Hay cambios sin guardar.'};
+  q.oninput=draw;
+  sv.onclick=async()=>{sv.disabled=true;msg.textContent='Guardando…';
+    try{const r=need(await call('personalSet',{personal:PLIST}));sucio=false;
+      PMSG='Guardado. '+(r.creados?r.creados+' usuarios nuevos creados (usuario y clave = cédula). ':'')+(r.actualizados?r.actualizados+' actualizados. ':'')+(r.desactivados?r.desactivados+' desactivados. ':'')+((r.omitidos||[]).length?'Sin usuario: '+r.omitidos.join('; ')+'.':'');
+      await renderPers()}catch(e){msg.textContent='No se pudo guardar: '+humanErr(e)}sv.disabled=false};
+  const add=H('button',{className:'btn alt',textContent:'Agregar persona'});add.onclick=()=>{PLIST.push({nombre:'',grado:'',cedula:'',activo:'si',operativo:'auto'});marcar();q.value='';draw();body.lastChild&&body.lastChild.querySelector('input').focus()};
+  const csv=H('button',{className:'btn alt',textContent:'Descargar lista (CSV)'});
+  csv.onclick=()=>{const cols=PCOLS.map(c=>c[0]).concat(['operativo','activo']);const q_=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+    const s='﻿'+cols.join(';')+'\n'+PLIST.map(p=>cols.map(c=>q_(p[c])).join(';')).join('\n');
+    save('PERSONAL CBV LA UNION.csv',new Blob([s],{type:'text/csv;charset=utf-8'}))};
+  const ini=H('button',{className:'btn alt',textContent:'Cargar listado inicial (64 personas)'});
+  ini.onclick=async()=>{
+    if(!confirm('Esto agrega al personal las personas del listado oficial que todavía no estén (por cédula). No borra ni cambia a nadie. ¿Continuar?'))return;
+    try{const r=await fetch('personal_inicial.json',{cache:'no-store'});if(!r.ok)throw new Error('No está el archivo personal_inicial.json en la página (súbalo junto con estadistica.html).');
+      const L=await r.json();const ya=new Set(PLIST.map(p=>String(p.cedula||'').replace(/\D/g,'')).filter(Boolean));let n=0;
+      L.forEach(p=>{const c=String(p.cedula||'').replace(/\D/g,'');if(c&&ya.has(c))return;PLIST.push(Object.assign({activo:'si',operativo:'auto',acceso:''},p));n++});
+      marcar();draw();msg.textContent=n+' personas agregadas a la lista. Pulse «Guardar cambios del personal» para guardarlas y crear sus usuarios.'}
+    catch(e){msg.textContent=humanErr(e)}};
+  const tw=H('div',{className:'scroll'});t.innerHTML=head;t.append(body);tw.append(t);
+  box.append(card(H('h3',{},'Personal de la estación'),info,H('div',{className:'tools'},lbl('Buscar',q)),H('div',{className:'dl'},add,ini,csv,sv),msg,tw));
+  draw();
+  window.onbeforeunload=()=>sucio?'Hay cambios sin guardar en el personal.':undefined;
+}
+async function resetClave(p,msg){
+  const ced=String(p.cedula||'').replace(/\D/g,'');
+  if(!ced){alert('Esta persona no tiene cédula. Escriba la cédula y guarde primero.');return}
+  const nueva=prompt('Restablecer la clave de '+(p.nombre||ced)+'.\n\nDeje vacío para que la clave vuelva a ser su cédula ('+ced+'), o escriba una clave temporal (mínimo 6 caracteres). La persona podrá cambiarla después.','');
+  if(nueva===null)return;
+  try{const r=need(await call('userReset',{usuario:ced,clave:nueva.trim()}));
+    msg.textContent='Clave restablecida. Usuario: '+r.usuario+' · clave temporal: '+r.clave+'. Dígasela a la persona; puede cambiarla en «Ajustes» de la aplicación.';alert('Listo.\nUsuario: '+r.usuario+'\nClave temporal: '+r.clave)}
+  catch(e){const m=humanErr(e);msg.textContent='No se pudo: '+m+(/No existe/i.test(m)?' (Si es una persona nueva, pulse primero «Guardar cambios del personal».)':'')}
+}
+
+/* --- Auditoría --- */
+const ACC_TXT={config:'Cambió la configuración','clave-restablecida':'Restableció una clave',eliminar:'Eliminó un registro',anular:'Anuló un registro',restaurar:'Restauró un registro',correccion:'Corrigió un registro',personal:'Cambió la lista de personal'};
+const fcu=ms=>{const n=Number(ms);return n?new Date(n).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'medium',hour12:false}):''};
+async function renderAud(){
+  const box=$('p-aud');box.innerHTML='';
+  const cm=H('div'),au=H('div'),el=H('div');
+  box.append(card(H('h3',{},'Registro de movimientos'),H('p',{className:'derived'},'Todo lo que se corrige, anula o elimina queda anotado aquí con quién, cuándo y el motivo. Esta lista no se puede borrar desde la aplicación.')),cm);
+  if(esMaster())box.append(el);
+  box.append(au);
+  cm.append(card(H('p',{className:'derived'},'Cargando…')));
+  try{
+    const c=need(await call('cambios',{n:300})).cambios||[];
+    const t=H('table');t.innerHTML='<tr><th>Cuándo</th><th>Registro</th><th>Qué pasó</th><th>Quién</th><th>Dónde</th><th>Detalle</th></tr>';
+    c.slice().reverse().forEach(x=>{const cb=x.cambios||{};const ks=Object.keys(cb).filter(k=>k!=='_motivo'&&k!=='_registro');
+      const det=(cb._motivo&&cb._motivo[0]?'Motivo: '+cb._motivo[0]+'. ':'')+(x.tipo==='correccion'?ks.map(k=>(CAMPO_TXT[k]||k)+': «'+valTxt(k,(cb[k]||[])[0])+'» → «'+valTxt(k,(cb[k]||[])[1])+'»').join(' · '):'');
+      const tr=H('tr');tr.append(H('td',{className:'m'},fcu(x.cuando)),H('td',{className:'m'},x.num||''),H('td',{},TIPO_CAMB[x.tipo]||x.tipo),H('td',{},x.quien||''),H('td',{},x.origen==='central'?'Central':'Teléfono'),H('td',{},det.slice(0,500)));t.append(tr)});
+    cm.innerHTML='';cm.append(card(H('h3',{},'Línea de tiempo de todos los reportes'),c.length?H('div',{className:'scroll'},t):H('p',{className:'derived'},'Todavía no hay movimientos.')));
+  }catch(e){cm.innerHTML='';cm.append(card(H('p',{className:'err'},'No se pudo leer: '+humanErr(e))))}
+  if(esMaster())try{
+    const l=need(await call('eliminadosGet')).elim||[];
+    const t=H('table');t.innerHTML='<tr><th>Número</th><th>Categoría</th><th>Día</th><th>Dirección</th><th>Eliminado por</th><th>Cuándo</th><th>Motivo</th></tr>';
+    l.slice().reverse().forEach(x=>{const tr=H('tr');tr.append(H('td',{className:'m'},x.num||''),H('td',{},x.cat||''),H('td',{},GEN.dmy(x.fecha)),H('td',{},x.dir||''),H('td',{},x.elim_por||''),H('td',{className:'m'},fcu(x.elim_cuando)),H('td',{},x.elim_motivo||''));t.append(tr)});
+    el.append(card(H('h3',{},'Registros eliminados (solo superadministrador)'),H('p',{className:'derived'},'Los registros eliminados salen de la estadística y de la hoja principal, pero quedan guardados aquí.'),l.length?H('div',{className:'scroll'},t):H('p',{className:'derived'},'No hay registros eliminados.')));
+  }catch(e){el.append(card(H('p',{className:'err'},'No se pudieron leer los eliminados: '+humanErr(e))))}
+  try{
+    const a=need(await call('aud',{n:300})).aud||[];
+    const t=H('table');t.innerHTML='<tr><th>Cuándo</th><th>Quién</th><th>Acción</th><th>Sobre</th><th>Detalle</th></tr>';
+    a.slice().reverse().forEach(x=>{const tr=H('tr');tr.append(H('td',{className:'m'},fcu(x.cuando)),H('td',{},x.quien||''),H('td',{},ACC_TXT[x.accion]||x.accion||''),H('td',{className:'m'},x.registro||''),H('td',{},String(x.detalle||'').slice(0,300)));t.append(tr)});
+    au.append(card(H('h3',{},'Auditoría general'),a.length?H('div',{className:'scroll'},t):H('p',{className:'derived'},'Sin movimientos.')));
+  }catch(e){au.append(card(H('p',{className:'err'},'No se pudo leer la auditoría: '+humanErr(e))))}
+}
+
+/* --- Usuarios (cuentas de Estadística) --- */
+async function admUsr(){
+  let us;try{us=need(await call('usersGet')).users}catch(e){setBox(card(H('p',{className:'err'},'No se pudo leer: '+humanErr(e))));return}
+  const msg=H('div',{className:'derived',role:'status'});
+  const info=card(H('h3',{},'Usuarios y claves'),H('p',{className:'derived'},'Los bomberos entran con su cédula como usuario y como clave inicial (se crean solos al guardar la lista en la pestaña «Personal»). Cada uno puede cambiar su clave en «Ajustes». Si alguien la olvida, pulse «Restablecer clave» aquí: vuelve a ser su cédula, o la que usted escriba. Para dar acceso a esta página de Estadística cambie el «Acceso» en la pestaña Personal, o cree una cuenta aparte abajo.'),msg);
+  const nm=H('input',{placeholder:'Nombre completo'}),us_=H('input',{placeholder:'usuario (sin espacios ni tildes)',autocapitalize:'off'}),rol=H('select'),cl=H('input',{type:'password',placeholder:'Clave (mínimo 6 caracteres)',autocomplete:'new-password'}),act=H('input',{type:'checkbox',checked:true});
+  rol.append(new Option('Campo (solo aplicación del celular)','campo'),new Option('Central (estadística, mapas)','central'),new Option('Superadministrador (todo)','master'));
+  const form=card(H('h3',{},'Agregar o modificar una cuenta'),H('div',{className:'tools'},lbl('Usuario',us_),lbl('Nombre',nm),lbl('Rol',rol),lbl('Clave',cl)),
+    H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},act,'Activo'),
+    (()=>{const b=H('button',{className:'btn sm',textContent:'Guardar cuenta'});b.onclick=async()=>{try{need(await call('userSet',{usuario:us_.value,nombre:nm.value,rol:rol.value,clave:cl.value,activo:act.checked}));admUsr()}catch(e){msg.textContent=humanErr(e)}};return b})());
+  const t=H('table');t.innerHTML='<tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Origen</th><th>Estado</th><th></th></tr>';
+  us.forEach(u=>{const tr=H('tr');tr.innerHTML='<td class="m">'+esc(u.usuario)+'</td><td>'+esc(u.nombre)+'</td><td>'+(u.rol==='master'?'Superadministrador':u.rol==='central'?'Central':'Campo')+'</td><td>'+(u.origen==='personal'?'Personal':'Manual')+'</td><td>'+(u.activo?'<span class="pill on">activo</span>':'<span class="pill off">desactivado</span>')+'</td>';
+    const td=H('td');
+    const e=H('button',{className:'btn alt sm',textContent:'Editar'});e.onclick=()=>{us_.value=u.usuario;nm.value=u.nombre;rol.value=u.rol;act.checked=u.activo;cl.value='';cl.placeholder='Clave nueva (vacío = no cambiar)';form.scrollIntoView({behavior:'smooth'})};
+    const rs=H('button',{className:'btn alt sm',textContent:'Restablecer clave'});rs.onclick=()=>resetClave({cedula:u.usuario,nombre:u.nombre},msg);
+    const d=H('button',{className:'btn alt sm',textContent:'Eliminar'});d.onclick=async()=>{if(!confirm('¿Eliminar al usuario '+u.usuario+'?'))return;try{need(await call('userDel',{usuario:u.usuario}));admUsr()}catch(x){alert(humanErr(x))}};
+    td.append(e,' ',rs,' ',d);tr.append(td);t.append(tr)});
+  setBox(info,form,card(H('div',{className:'scroll'},t)));
+}
+
+/* --- Aplicación y alertas --- */
+async function admApp(){
+  let c;try{c=need(await call('cfgGet')).cfg}catch(e){setBox(card(H('p',{className:'err'},humanErr(e))));return}
+  const a=Object.assign({titulo:'Registrar emergencia',org:'CBV La Unión',guardiaTel:'3117694047',sosSirena:true,gpsSeg:20,sosGpsSeg:5,recordHoras:3,snifLonNeg:false},c.app||{});
+  if(!a.guardiaTel&&a.sosTel)a.guardiaTel=a.sosTel;
+  const lk=Object.assign({gre:'https://www.phmsa.dot.gov/sites/phmsa.dot.gov/files/2024-04/GRE2024-Spa-Web-a.pdf',agua:'https://www.google.com/maps/d/viewer?mid=1StvlhQwpDdWVCPY15-h4RBTw17vpGMc',hidrantes:'https://www.google.com/maps/d/viewer?mid=1GwWSjR5XsHPFgZPoR4JHQJFBc0n-eb8'},a.links||{});
+  const av=Object.assign({},c.avisos||{});
+  let wa=c.whatsapp?(Array.isArray(c.whatsapp)?c.whatsapp.slice():[c.whatsapp]):[];wa=wa.map(x=>({phone:x.phone||'',apikey:x.apikey||''}));
+  const msg=H('div',{className:'derived',role:'status'});
+  const inp=(v,p,ex)=>H('input',Object.assign({value:v==null?'':v,placeholder:p||''},ex||{}));
+  const t=inp(a.titulo),o=inp(a.org),gt=inp(a.guardiaTel,'3117694047',{inputMode:'tel'}),gp=inp(a.gpsSeg,'',{type:'number',min:10,max:120}),sgp=inp(a.sosGpsSeg,'',{type:'number',min:3,max:60}),rh=inp(a.recordHoras,'',{type:'number',min:1,max:48}),
+    sir=H('input',{type:'checkbox',checked:a.sosSirena!==false}),ln=H('input',{type:'checkbox',checked:!!a.snifLonNeg}),
+    gre=inp(lk.gre),agua=inp(lk.agua),hid=inp(lk.hidrantes),
+    est=inp(c.estacion||'','(vacío = el que escribió en el script)'),em=H('textarea',{rows:2,value:c.emails||'',placeholder:'correo1@gmail.com, correo2@gmail.com'}),
+    ro=H('textarea',{rows:2,value:(Array.isArray(c.rangosOper)?c.rangosOper:[]).join(', '),placeholder:'(vacío = bombero, cabo, sargento, subteniente, teniente, capitán, mayor, coronel, comandante…)'});
+  const chk=(k,txt)=>{const i=H('input',{type:'checkbox',checked:!av[k+'Off']});i.onchange=()=>{av[k+'Off']=!i.checked};return H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},i,txt)};
+  const ci=H('input',{type:'checkbox',checked:av.correo!==false});ci.onchange=()=>{av.correo=ci.checked};
+  const wbox=H('div');
+  const drawW=()=>{wbox.innerHTML='';wa.forEach((w,i)=>{const row=H('div',{className:'adm-f'});const p=inp(w.phone,'573001234567',{inputMode:'tel'}),k=inp(w.apikey,'apikey de CallMeBot');p.oninput=()=>w.phone=p.value;k.oninput=()=>w.apikey=k.value.trim();
+    const x=H('button',{className:'btn alt sm',textContent:'Quitar'});x.onclick=()=>{wa.splice(i,1);drawW()};row.append(p,k,x);wbox.append(row)})};drawW();
+  const addW=H('button',{className:'btn alt sm',textContent:'Agregar número de WhatsApp'});addW.onclick=()=>{wa.push({phone:'',apikey:''});drawW()};
+  const b=H('button',{className:'btn',textContent:'Guardar'});
+  b.onclick=async()=>{b.disabled=true;msg.textContent='Guardando…';
+    try{
+      const app={titulo:t.value.trim()||'Registrar emergencia',org:o.value.trim()||'CBV La Unión',guardiaTel:gt.value.replace(/[^\d+]/g,''),sosSirena:sir.checked,gpsSeg:Math.max(10,Math.min(120,+gp.value||20)),sosGpsSeg:Math.max(3,Math.min(60,+sgp.value||5)),recordHoras:Math.max(1,Math.min(48,+rh.value||3)),snifLonNeg:ln.checked,links:{gre:gre.value.trim(),agua:agua.value.trim(),hidrantes:hid.value.trim()}};
+      need(await call('cfgSet',{clave:'app',valor:app}));need(await call('cfgSet',{clave:'emails',valor:em.value.trim()}));
+      need(await call('cfgSet',{clave:'whatsapp',valor:wa.filter(x=>x.phone.trim()&&x.apikey.trim())}));
+      need(await call('cfgSet',{clave:'avisos',valor:av}));
+      need(await call('cfgSet',{clave:'rangosOper',valor:ro.value.split(',').map(s=>s.trim()).filter(Boolean)}));
+      if(est.value.trim()&&est.value.trim()!==c.estacion){if(!confirm('Va a cambiar el código de la estación (solo lo usan versiones antiguas de la aplicación). ¿Continuar?')){b.disabled=false;msg.textContent='';return}need(await call('cfgSet',{clave:'estacion',valor:est.value.trim()}))}
+      CFGP.app=app;aplicarCfg(CFGP);msg.textContent='Guardado. Los teléfonos toman los cambios la próxima vez que abran la aplicación con internet.'
+    }catch(e){msg.textContent='No se pudo guardar: '+humanErr(e)}b.disabled=false};
+  const test=H('button',{className:'btn alt',textContent:'Enviar aviso de prueba (correo y WhatsApp)'});
+  test.onclick=async()=>{msg.textContent='Enviando prueba…';try{const r=need(await call('avisoPrueba'));const x=r.canales||{};msg.textContent='Correo: '+x.correo+' · WhatsApp: '+x.whatsapp+'. (Guarde antes los cambios si acaba de modificarlos.)'}catch(e){msg.textContent=humanErr(e)}};
+  setBox(
+    card(H('h3',{},'Textos de la aplicación'),H('div',{className:'tools'},lbl('Título de la aplicación del celular',t),lbl('Nombre de la institución',o))),
+    card(H('h3',{},'Guardia y SOS'),H('div',{className:'tools'},lbl('Teléfono de la guardia (botones «Llamar» y WhatsApp, y mensaje de SOS)',gt),lbl('Segundos entre envíos de ubicación (normal)',gp),lbl('Segundos entre envíos con SOS activo',sgp),lbl('Horas que se guarda el recorrido de las unidades',rh)),
+      H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},sir,'Sonar la sirena también en el teléfono de quien activa el SOS')),
+    card(H('h3',{},'Enlaces de las herramientas del celular'),H('p',{className:'derived'},'Los mapas de fuentes de agua e hidrantes deben estar compartidos como «Cualquier persona con el enlace puede ver» en Google My Maps; si no, no se verán dentro de la aplicación.'),lbl('Guía GRE 2024 (PDF)',gre),lbl('Mapa de fuentes de agua',agua),lbl('Mapa de hidrantes',hid)),
+    card(H('h3',{},'Avisos por correo y WhatsApp'),H('p',{className:'derived'},'Los avisos de SOS, de nuevo reporte y de borradores pendientes salen por correo y por WhatsApp (solo estos dos canales). WhatsApp funciona con el servicio gratuito CallMeBot: cada número debe activarse una sola vez (la guía explica cómo) y aquí se escribe el número con indicativo (573…) y la apikey que le responde CallMeBot.'),
+      lbl('Correos que reciben los avisos (separados por coma)',em),
+      H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},ci,'Enviar avisos por correo'),
+      H('h4',{},'Números de WhatsApp'),wbox,H('div',{className:'dl'},addW),
+      H('h4',{},'Qué avisos se envían'),chk('sos','Alerta SOS / bombero caído'),chk('reporte','Nuevo reporte recibido'),chk('recordatorio','Recordatorio de borradores pendientes'),H('div',{className:'dl'},test)),
+    card(H('h3',{},'Quiénes atienden emergencias'),lbl('Grados que atienden emergencias (separados por coma; vacío = lista normal desde «bombero»)',ro)),
+    card(H('h3',{},'Formato de incendios forestales (SNIF)'),H('label',{style:'display:flex;gap:8px;align-items:center;flex-direction:row'},ln,'Escribir los grados de longitud con signo negativo (-76). Déjelo apagado para que salga 76, como en el archivo que ya usan.')),
+    card(H('h3',{},'Código de la estación (versiones antiguas)'),lbl('Código',est),H('p',{className:'derived'},'Ya no hace falta: ahora cada persona entra con su cédula. Solo se conserva para teléfonos que aún tengan la versión anterior.')),
+    card(H('div',{className:'dl'},b),msg));
+}
+
+/* --- Diagnóstico --- */
 async function admDgn(){
   const t=H('table'),rows=[];
   const add=(n,ok,det)=>{rows.push([n,ok,det]);t.innerHTML='<tr><th></th><th>Prueba</th><th>Resultado</th></tr>'+rows.map(r=>'<tr><td>'+(r[1]===true?'✔':r[1]===false?'✖':'ℹ')+'</td><td>'+esc(r[0])+'</td><td>'+esc(r[2]||'')+'</td></tr>').join('')};
-  setBox(card(H('h3',{},'Diagnóstico de la conexión'),H('p',{className:'derived'},'Prueba cada función de la central. Si una falla con «página de Google» o «<!DOCTYPE», ahí está el problema: casi siempre es que el script publicado no es la última versión o que la implementación no es «Cualquier persona».'),H('div',{className:'scroll'},t)));
+  const rep=H('button',{className:'btn alt',textContent:'Reparar formatos de la hoja (horas y fechas)'});const rm=H('div',{className:'derived',role:'status'});
+  rep.onclick=async()=>{rm.textContent='Reparando…';try{const r=need(await call('reparar'));rm.textContent='Listo. '+JSON.stringify(r).slice(0,300)}catch(e){rm.textContent=humanErr(e)}};
+  setBox(card(H('h3',{},'Diagnóstico de la conexión'),H('p',{className:'derived'},'Prueba cada función. Si algo falla con «página de Google» o «<!DOCTYPE», casi siempre es que el script publicado no es la última versión: pegue el Code.gs nuevo y publique «Nueva versión».'),H('div',{className:'scroll'},t),H('div',{className:'dl'},rep),rm));
   add('Dirección del servicio (config.js)',!!CFG.SCRIPT_URL&&!/PEGUE/.test(CFG.SCRIPT_URL),CFG.SCRIPT_URL||'falta');
-  try{const r=await fetch(CFG.SCRIPT_URL,{redirect:'follow'});const x=await r.text();let j;try{j=JSON.parse(x)}catch(e){add('Abrir la dirección sin datos (GET)',false,'No devolvió datos sino una página: '+x.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,120));j=null}
+  try{const r=await fetch(CFG.SCRIPT_URL,{redirect:'follow'});const x=await r.text();let j;try{j=JSON.parse(x)}catch(e){add('Abrir la dirección sin datos (GET)',false,'No devolvió datos sino una página: '+x.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,160))}
     if(j)add('Versión del script publicado',j.version===VERSION_ESPERADA,'Publicado: '+j.version+' · esperado: '+VERSION_ESPERADA+(j.version!==VERSION_ESPERADA?' → falta pegar el Code.gs nuevo y publicar «Nueva versión»':''))}
   catch(e){add('Abrir la dirección (GET)',false,humanErr(e))}
   const t0=Date.now();
   const probar=async(n,a,x)=>{try{const r=await rawCall({u:USER,t:TOKEN,a,...(x||{})},60000);add(n+' ('+(Date.now()-t0)+' ms acumulados)',!!r.ok,r.ok?'bien':(r.detalle||r.error))}catch(e){add(n,false,humanErr(e))}};
-  await probar('Sesión y permisos','yo');await probar('Lista de registros','lista',{desde:Date.now()});await probar('Personal','personalGet');await probar('Auditoría','aud',{n:1});await probar('Unidades en vivo','vivo');await probar('Mapa de calor','calor',{desde:Date.now()});await probar('Histórico guardado','histGet');
+  await probar('Sesión y permisos','yo');await probar('Lista de registros','lista',{desde:Date.now()});await probar('Personal','personalGet');await probar('Auditoría','aud',{n:1});await probar('Unidades en vivo','vivo');
   try{const d=need(await call('diag'));
     add('Versión del código',d.version===VERSION_ESPERADA,d.version);
     Object.keys(d.hojas).forEach(k=>add('Hoja «'+k+'»',typeof d.hojas[k]==='number',typeof d.hojas[k]==='number'?d.hojas[k]+' filas':d.hojas[k]));
@@ -1083,6 +1460,9 @@ async function admDgn(){
     add('Cuenta que ejecuta el script',true,d.cuenta+' (comparta con esta cuenta el Formulario de Google, como editor)');
     add('Correos de alerta disponibles hoy',typeof d.correosRestantes==='number',String(d.correosRestantes));
     add('Formulario de Google',!/^error/.test(d.form),d.form);
+    add('WhatsApp (CallMeBot)',d.whatsapp==='configurado'?true:null,d.whatsapp);
+    add('Recordatorios de borradores',/activos/.test(d.recordatorios||'')?true:false,d.recordatorios||'');
+    const bh=d.borradosEnLaHoja||[];add('Registros borrados a mano de la hoja',bh.length?false:true,bh.length?bh.join(', ')+' (se borraron sin usar «Eliminar» de la central: no quedó el motivo)':'ninguno');
   }catch(e){add('Diagnóstico del servidor',false,humanErr(e))}
 }
 
